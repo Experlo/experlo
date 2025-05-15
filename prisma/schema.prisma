@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Booking {
+  id              String         @id @default(cuid())
+  user            User           @relation("UserBookings", fields: [userId], references: [id])
+  userId          String
+  expert          ExpertProfile  @relation("ExpertBookings", fields: [expertId], references: [id])
+  expertId        String
+  scheduledAt     DateTime
+  durationMinutes Int
+  status          BookingStatus  @default(SCHEDULED)
+  transcriptUrl   String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+
+
+model ExpertProfile {
+  id                     String         @id @default(cuid())
+  user                   User           @relation(fields: [userId], references: [id])
+  userId                 String         @unique
+  title                  String
+  bio                    String
+  pricePerHour           Float
+  isAvailable            Boolean        @default(true)
+  categories             String[]       // e.g. ["finance", "math", "legal"]
+  education              Education[]
+  experience             Experience[]
+  certifications         Certification[]
+  totalBookings          Int            @default(0)
+  totalConsultationMinutes Int          @default(0)
+  rating                 Float          @default(0)
+  reviews                Review[]
+  availableTimeSlots     TimeSlot[]
+  bookings               Booking[]      @relation("ExpertBookings")
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id              String         @id @default(cuid())
+  email           String         @unique
+  firstName       String
+  lastName        String
+  image           String?
+  password        String
+  isExpert        Boolean        @default(false)
+  expertProfile   ExpertProfile?
+  bookings        Booking[]      @relation("UserBookings")
+  reviews         Review[]
+  accounts        Account[]
+  sessions        Session[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Education {
+  id          String        @id @default(cuid())
+  school      String
+  degree      String
+  field       String
+  startYear   Int
+  endYear     Int
+  expert      ExpertProfile @relation(fields: [expertId], references: [id], onDelete: Cascade)
+  expertId    String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Experience {
+  id          String        @id @default(cuid())
+  company     String
+  position    String
+  description String
+  startYear   Int
+  endYear     Int?
+  expert      ExpertProfile @relation(fields: [expertId], references: [id], onDelete: Cascade)
+  expertId    String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Certification {
+  id          String        @id @default(cuid())
+  name        String
+  issuer      String
+  year        Int
+  expert      ExpertProfile @relation(fields: [expertId], references: [id], onDelete: Cascade)
+  expertId    String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Review {
+  id          String        @id @default(cuid())
+  rating      Int
+  comment     String?
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  expert      ExpertProfile @relation(fields: [expertId], references: [id], onDelete: Cascade)
+  expertId    String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model TimeSlot {
+  id          String        @id @default(cuid())
+  startTime   DateTime
+  endTime     DateTime
+  isBooked    Boolean       @default(false)
+  expert      ExpertProfile @relation(fields: [expertId], references: [id], onDelete: Cascade)
+  expertId    String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+enum BookingStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
