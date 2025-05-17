@@ -1,24 +1,34 @@
-import { Metadata } from 'next';
-import BecomeExpertForm from '@/features/profile/components/BecomeExpertForm';
+'use client';
 
-interface Props {
-  searchParams: { [key: string]: string | string[] | undefined };
-}
+import { useRouter } from 'next/navigation';
+import BecomeExpertForm from './BecomeExpertForm';
+import { FormData } from './BecomeExpertForm';
 
-export const metadata: Metadata = {
-  title: 'Become an Expert | Experlo',
-  description: 'Share your expertise and start earning by helping others on Experlo',
-};
+export default function BecomeExpertPage() {
+  const router = useRouter();
 
-export default async function BecomeExpertPage({ searchParams }: Props) {
-  const error = await Promise.resolve(searchParams?.error);
+  const handleSave = async (formData: FormData) => {
+    try {
+      const response = await fetch('/api/experts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
 
-  // Mock user data
-  const mockUser = {
-    id: '1',
-    email: 'john@example.com',
-    firstName: 'John',
-    lastName: 'Doe'
+      if (!response.ok) {
+        throw new Error('Failed to create expert profile');
+      }
+
+      router.push('/dashboard');
+    } catch (error) {
+      console.error('Error creating expert profile:', error);
+    }
+  };
+
+  const handleCancel = () => {
+    router.push('/');
   };
 
   return (
@@ -26,7 +36,14 @@ export default async function BecomeExpertPage({ searchParams }: Props) {
       <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
           <div className="p-6 bg-white border-b border-gray-200">
-            <BecomeExpertForm error={error} user={mockUser} />
+            <h1 className="text-3xl font-bold mb-8">Become an Expert</h1>
+            <p className="text-gray-600 mb-8">
+              Share your expertise and help others succeed. Complete the form below to get started.
+            </p>
+            <BecomeExpertForm 
+              onSave={handleSave}
+              onCancel={handleCancel}
+            />
           </div>
         </div>
       </div>

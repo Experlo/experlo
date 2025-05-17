@@ -1,309 +1,862 @@
 'use client';
 
-import { useState } from 'react';
-import { NewExpert, Education, Certification } from '@/core/types/expert';
+import React, { useState, FormEvent, ChangeEvent, KeyboardEvent } from 'react';
+import { SerializedUser } from '@/types/user';
+import { Expert, Education, Experience } from '@/types/expert';
+import { Label } from '@/shared/components/ui/Label';
+import { Input } from '@/shared/components/ui/Input';
 import { Button } from '@/shared/components/ui/Button';
+import { Textarea } from '@/shared/components/ui/Textarea';
+import { XCircleIcon, PlusIcon } from '@heroicons/react/24/outline';
+import styles from './EditExpertProfile.module.css';
 
-interface EditExpertProfileProps {
-  expertData: NewExpert;
-  onCancel: () => void;
-  onSave: () => void;
+interface Certification {
+  id: string;
+  name: string;
+  issuer: string;
+  year: number;
+  expertId: string;
+  issuingOrganization: string;
+  issueDate: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export default function EditExpertProfile({ expertData, onCancel, onSave }: EditExpertProfileProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [formData, setFormData] = useState({
-    bio: expertData.bio || '',
-    expertise: expertData.expertise || [],
-    minuteRate: expertData.hourlyRate || 0,
-    education: expertData.education || [],
-    certifications: expertData.certifications || [],
+interface CertificationForm extends Omit<Certification, 'createdAt' | 'updatedAt'> {
+  id: string;
+  name: string;
+  issuer: string;
+  year: number;
+  expertId: string;
+  issuingOrganization: string;
+  issueDate: string;
+}
+
+interface FormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  image: string;
+  title?: string;
+  bio?: string;
+  categories: string[];
+  pricePerHour: number;
+  education: Education[];
+  experience: Experience[];
+  certifications: CertificationForm[];
+}
+
+interface EditExpertProfileProps {
+  userData: SerializedUser;
+  expertData: Expert;
+  onCancel: () => void;
+  onSave: (formData: FormData) => Promise<void>;
+  isLoading?: boolean;
+}
+
+export default function EditExpertProfile({ userData, expertData, onCancel, onSave, isLoading = false }: EditExpertProfileProps): React.ReactElement {
+  const [formData, setFormData] = useState<FormData>({
+    firstName: userData.firstName || '',
+    lastName: userData.lastName || '',
+    email: userData.email || '',
+    image: userData.image || '',
+    title: expertData?.title || '',
+    bio: expertData?.bio || '',
+    categories: expertData?.categories || [],
+    pricePerHour: expertData?.pricePerHour || 0,
+    education: expertData?.education || [],
+    experience: expertData?.experience || [],
+    certifications: expertData?.certifications || [],
   });
 
-  const handleExpertiseChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const expertise = e.target.value.split(',').map(item => item.trim()).filter(Boolean);
-    setFormData(prev => ({ ...prev, expertise }));
+  const [error, setError] = useState('');
+  const [expandedItems, setExpandedItems] = useState<Record<'education' | 'experience' | 'certifications', number[]>>({
+    education: [],
+    experience: [],
+    certifications: []
+  });
+  
+  const [editingItems, setEditingItems] = useState<Record<'education' | 'experience' | 'certifications', number[]>>({
+    education: [],
+    experience: [],
+    certifications: []
+  });
+  
+  const [tempFormData, setTempFormData] = useState<FormData>({
+    ...formData
+  });
+
+  const isExpert = !!expertData;
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const addEducation = () => {
+  const handleCategoryKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const value = (e.target as HTMLInputElement).value;
+      addCategory(value);
+      (e.target as HTMLInputElement).value = '';
+    }
+  };
+
+  const addCategory = (value: string) => {
+    const trimmedValue = value.trim();
+    if (trimmedValue && !formData.categories.includes(trimmedValue)) {
+      setFormData(prev => ({
+        ...prev,
+        categories: [...prev.categories, trimmedValue]
+      }));
+    }
+  };
+
+  const removeCategory = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      education: [
-        ...prev.education,
-        {
-          school: '',
-          degree: '',
-          field: '',
-          startYear: new Date().getFullYear(),
-          endYear: new Date().getFullYear(),
-        },
-      ],
+      categories: prev.categories.filter((_, i) => i !== index)
     }));
   };
 
-  const updateEducation = (index: number, field: keyof Education, value: string | number) => {
+  const toggleExpanded = (type: 'education' | 'experience' | 'certifications', index: number) => {
+    if (editingItems[type].includes(index)) return; // Don't toggle if editing
+    setExpandedItems(prev => ({
+      ...prev,
+      [type]: prev[type].includes(index)
+        ? prev[type].filter(i => i !== index)
+        : [...prev[type], index]
+    }));
+  };
+
+  const startEditing = (type: 'education' | 'experience' | 'certifications', index: number) => {
+    setEditingItems(prev => ({
+      ...prev,
+      [type]: [...prev[type], index]
+    }));
+    setExpandedItems(prev => ({
+      ...prev,
+      [type]: [...prev[type], index]
+    }));
+    // Copy current data to temp data
+    setTempFormData(prev => ({
+      ...prev,
+      [type]: [...formData[type]]
+    }));
+  };
+
+  const cancelEditing = (type: 'education' | 'experience' | 'certifications', index: number) => {
+    setEditingItems(prev => ({
+      ...prev,
+      [type]: prev[type].filter(i => i !== index)
+    }));
+    setExpandedItems(prev => ({
+      ...prev,
+      [type]: prev[type].filter(i => i !== index)
+    }));
+    // Revert changes
+    setTempFormData(prev => ({
+      ...prev,
+      [type]: [...formData[type]]
+    }));
+  };
+
+  const saveEditing = (type: 'education' | 'experience' | 'certifications', index: number) => {
     setFormData(prev => ({
       ...prev,
-      education: prev.education.map((edu, i) =>
-        i === index ? { ...edu, [field]: value } : edu
-      ),
+      [type]: prev[type].map((item, i) =>
+        i === index ? tempFormData[type][i] : item
+      )
+    }));
+    setEditingItems(prev => ({
+      ...prev,
+      [type]: prev[type].filter(i => i !== index)
+    }));
+    setExpandedItems(prev => ({
+      ...prev,
+      [type]: prev[type].filter(i => i !== index)
+    }));
+  };
+
+  const handleEducationFieldChange = (index: number, field: keyof Education, value: string | number) => {
+    setTempFormData(prev => ({
+      ...prev,
+      education: prev.education.map((edu, i) => {
+        if (i === index) {
+          return { ...edu, [field]: value };
+        }
+        return edu;
+      })
+    }));
+  };
+
+  const addEducation = () => {
+    const newEducation = { institution: '', degree: '', field: '', startYear: 0, endYear: 0 };
+    const newIndex = formData.education.length;
+    
+    setFormData(prev => ({
+      ...prev,
+      education: [...prev.education, newEducation]
+    }));
+    setTempFormData(prev => ({
+      ...prev,
+      education: [...prev.education, newEducation]
+    }));
+    // Automatically expand and start editing new item
+    setExpandedItems(prev => ({
+      ...prev,
+      education: [...prev.education, newIndex]
+    }));
+    setEditingItems(prev => ({
+      ...prev,
+      education: [...prev.education, newIndex]
     }));
   };
 
   const removeEducation = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      education: prev.education.filter((_, i) => i !== index),
+      education: prev.education.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleExperienceFieldChange = (index: number, field: keyof Experience, value: string | number) => {
+    setTempFormData(prev => ({
+      ...prev,
+      experience: prev.experience.map((exp, i) => {
+        if (i === index) {
+          return { ...exp, [field]: value };
+        }
+        return exp;
+      })
+    }));
+  };
+
+  const addExperience = () => {
+    const newExperience = { company: '', position: '', description: '', startYear: 0, endYear: 0 };
+    const newIndex = formData.experience.length;
+    
+    setFormData(prev => ({
+      ...prev,
+      experience: [...prev.experience, newExperience]
+    }));
+    setTempFormData(prev => ({
+      ...prev,
+      experience: [...prev.experience, newExperience]
+    }));
+    // Automatically expand and start editing new item
+    setExpandedItems(prev => ({
+      ...prev,
+      experience: [...prev.experience, newIndex]
+    }));
+    setEditingItems(prev => ({
+      ...prev,
+      experience: [...prev.experience, newIndex]
+    }));
+  };
+
+  const removeExperience = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      experience: prev.experience.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleCertificationFieldChange = (index: number, field: keyof CertificationForm, value: string | number) => {
+    setTempFormData(prev => ({
+      ...prev,
+      certifications: prev.certifications.map((cert, i) => {
+        if (i === index) {
+          return { ...cert, [field]: value };
+        }
+        return cert;
+      })
     }));
   };
 
   const addCertification = () => {
+    const newCertification: CertificationForm = {
+      id: '',
+      name: '',
+      issuer: '',
+      year: 0,
+      expertId: '',
+      issuingOrganization: '',
+      issueDate: ''
+    };
+    const newIndex = formData.certifications.length;
+    
     setFormData(prev => ({
       ...prev,
-      certifications: [
-        ...prev.certifications,
-        { name: '', issuer: '', year: new Date().getFullYear() }
-      ],
+      certifications: [...prev.certifications, newCertification]
     }));
-  };
-
-  const updateCertification = (index: number, field: keyof Certification, value: string | number) => {
-    setFormData(prev => ({
+    setTempFormData(prev => ({
       ...prev,
-      certifications: prev.certifications.map((cert, i) =>
-        i === index ? { ...cert, [field]: value } : cert
-      ),
+      certifications: [...prev.certifications, newCertification]
+    }));
+    // Automatically expand and start editing new item
+    setExpandedItems(prev => ({
+      ...prev,
+      certifications: [...prev.certifications, newIndex]
+    }));
+    setEditingItems(prev => ({
+      ...prev,
+      certifications: [...prev.certifications, newIndex]
     }));
   };
 
   const removeCertification = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      certifications: prev.certifications.filter((_, i) => i !== index),
+      certifications: prev.certifications.filter((_, i) => i !== index)
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError('');
 
     try {
-      const res = await fetch('/api/experts/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to update expert profile');
-      }
-
-      onSave();
+      await onSave(formData);
+      onCancel();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update expert profile');
-    } finally {
-      setIsLoading(false);
+      setError(err instanceof Error ? err.message : 'Failed to save changes');
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
-      )}
+    <div className={styles.modal}>
+      <div className={styles.backdrop} onClick={onCancel} />
+      <div className={styles.formContainer}>
+        <form onSubmit={handleSubmit} className={styles.form}>
+          {error && (
+            <div className={styles.error}>
+              <XCircleIcon className="h-5 w-5" />
+              <span>{error}</span>
+            </div>
+          )}
+        
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>Personal Information</h2>
+            <p className={styles.sectionSubtitle}>Update your personal and professional details.</p>
 
-      {/* Bio */}
-      <div>
-        <label htmlFor="bio" className="block text-sm font-medium text-gray-700">
-          Bio
-        </label>
-        <textarea
-          id="bio"
-          rows={4}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          value={formData.bio}
-          onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-        />
-      </div>
-
-      {/* Expertise */}
-      <div>
-        <label htmlFor="expertise" className="block text-sm font-medium text-gray-700">
-          Expertise (comma-separated)
-        </label>
-        <textarea
-          id="expertise"
-          rows={2}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          value={formData.expertise.join(', ')}
-          onChange={handleExpertiseChange}
-        />
-      </div>
-
-      {/* Minute Rate */}
-      <div>
-        <label htmlFor="minuteRate" className="block text-sm font-medium text-gray-700">
-          Rate per minute ($)
-        </label>
-        <input
-          type="number"
-          id="minuteRate"
-          min={0}
-          step={0.1}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          value={formData.minuteRate}
-          onChange={(e) => setFormData(prev => ({ ...prev, minuteRate: parseFloat(e.target.value) || 0 }))}
-        />
-      </div>
-
-      {/* Education */}
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Education</h3>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={addEducation}
-          >
-            Add Education
-          </Button>
-        </div>
-        {formData.education.map((edu, index) => (
-          <div key={index} className="space-y-4 p-4 border rounded-md mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">School</label>
-              <input
+            <div className={styles.fieldGroup}>
+              <Label htmlFor="title">Professional Title</Label>
+              <Input
+                id="title"
                 type="text"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                value={edu.school}
-                onChange={(e) => updateEducation(index, 'school', e.target.value)}
+                placeholder="e.g., Senior Software Engineer, Business Consultant"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                className={styles.input}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Degree</label>
-              <input
-                type="text"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                value={edu.degree}
-                onChange={(e) => updateEducation(index, 'degree', e.target.value)}
+
+            <div className={styles.fieldGroup}>
+              <Label htmlFor="bio">Professional Bio</Label>
+              <Textarea
+                id="bio"
+                placeholder="Tell us about your professional background, expertise, and what makes you unique..."
+                value={formData.bio}
+                onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+                className={styles.textarea}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Field</label>
-              <input
-                type="text"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                value={edu.field}
-                onChange={(e) => updateEducation(index, 'field', e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Start Year</label>
+
+            <div className={styles.fieldGroup}>
+              <Label htmlFor="categories">Areas of Expertise</Label>
+              <div className={styles.tagsContainer}>
+                {formData.categories.map((category, index) => (
+                  <div className={styles.tag} key={index}>
+                    <span className={styles.tagText}>{category}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeCategory(index)}
+                      className="ml-1"
+                    >
+                      <XCircleIcon className={styles.tagDelete} />
+                    </button>
+                  </div>
+                ))}
                 <input
-                  type="number"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  value={edu.startYear}
-                  onChange={(e) => updateEducation(index, 'startYear', parseInt(e.target.value))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">End Year</label>
-                <input
-                  type="number"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  value={edu.endYear}
-                  onChange={(e) => updateEducation(index, 'endYear', parseInt(e.target.value))}
+                  type="text"
+                  id="categories"
+                  className={styles.tagInput}
+                  placeholder={formData.categories.length === 0 ? "e.g., Business Strategy, Technology Consulting (press Enter)" : ""}
+                  onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const value = e.currentTarget.value.trim();
+                      if (value) {
+                        addCategory(value);
+                        e.currentTarget.value = '';
+                      }
+                    } else if (e.key === 'Backspace' && e.currentTarget.value === '' && formData.categories.length > 0) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        categories: prev.categories.slice(0, -1)
+                      }));
+                    }
+                  }}
                 />
               </div>
             </div>
+
+            <div className={styles.fieldGroup}>
+              <Label htmlFor="pricePerHour">Hourly Rate (USD)</Label>
+              <div className="relative">
+                <Input
+                  id="pricePerHour"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.pricePerHour}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      setFormData(prev => ({ ...prev, pricePerHour: 0 }));
+                      return;
+                    }
+                    const numValue = parseFloat(value);
+                    if (!isNaN(numValue) && numValue >= 0) {
+                      setFormData(prev => ({ ...prev, pricePerHour: numValue }));
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const value = parseFloat(e.target.value);
+                    if (!isNaN(value) && value >= 0) {
+                      setFormData(prev => ({ ...prev, pricePerHour: Math.round(value * 100) / 100 }));
+                    }
+                  }}
+                  className={styles.input}
+                />
+              </div>
+              <p className="text-sm text-gray-500 mt-1">This will be your standard rate for consulting sessions.</p>
+            </div>
+          </div>
+
+          {/* Expert Profile Section */}
+          {isExpert && (
+            <>
+              {/* Education Section */}
+              <div className={styles.section}>
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>Education</h2>
+                <p className={styles.sectionSubtitle}>Add your educational background and qualifications.</p>
+
+                <div className="mt-8">
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addEducation}
+                      className={styles.addButton}
+                    >
+                      <PlusIcon className="h-5 w-5" />
+                      Add Education
+                    </button>
+                  </div>
+                  {formData.education.map((edu, idx) => {
+                    const isExpanded = expandedItems.education.includes(idx);
+                    const isEditing = editingItems.education.includes(idx);
+                    const currentData = isEditing ? tempFormData.education[idx] : edu;
+                    
+                    return (
+                      <div key={idx} className={`${styles.itemCard} ${!isExpanded ? styles.itemCardCollapsed : ''}`}>
+                        <div className={styles.itemHeader}>
+                          <div 
+                            className={styles.itemTitle}
+                            onClick={() => !isEditing && toggleExpanded('education', idx)}
+                          >
+                            {edu.institution || 'New Education'} - {edu.degree || 'Degree'}
+                          </div>
+                          <div className={styles.itemActions}>
+                            {!isEditing ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => startEditing('education', idx)}
+                                  className={`${styles.actionButton} ${styles.editButton}`}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeEducation(idx)}
+                                  className={`${styles.actionButton} ${styles.deleteButton}`}
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => saveEditing('education', idx)}
+                                  className={`${styles.actionButton} ${styles.saveButton}`}
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => cancelEditing('education', idx)}
+                                  className={`${styles.actionButton} ${styles.cancelButton}`}
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {isExpanded && (
+                          <div className={styles.itemContent}>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor={`institution-${idx}`}>Institution</Label>
+                                <Input
+                                  id={`institution-${idx}`}
+                                  value={currentData.institution}
+                                  onChange={(e) => handleEducationFieldChange(idx, 'institution', e.target.value)}
+                                  className={styles.input}
+                                  disabled={!isEditing}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`degree-${idx}`}>Degree</Label>
+                                <Input
+                                  id={`degree-${idx}`}
+                                  value={currentData.degree}
+                                  onChange={(e) => handleEducationFieldChange(idx, 'degree', e.target.value)}
+                                  className={styles.input}
+                                  disabled={!isEditing}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`field-${idx}`}>Field of Study</Label>
+                                <Input
+                                  id={`field-${idx}`}
+                                  value={currentData.field}
+                                  onChange={(e) => handleEducationFieldChange(idx, 'field', e.target.value)}
+                                  className={styles.input}
+                                  disabled={!isEditing}
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor={`startYear-${idx}`}>Start Year</Label>
+                                  <Input
+                                    id={`startYear-${idx}`}
+                                    type="number"
+                                    value={currentData.startYear}
+                                    onChange={(e) => handleEducationFieldChange(idx, 'startYear', parseInt(e.target.value))}
+                                    className={styles.input}
+                                    disabled={!isEditing}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor={`endYear-${idx}`}>End Year</Label>
+                                  <Input
+                                    id={`endYear-${idx}`}
+                                    type="number"
+                                    value={currentData.endYear}
+                                    onChange={(e) => handleEducationFieldChange(idx, 'endYear', parseInt(e.target.value))}
+                                    className={styles.input}
+                                    disabled={!isEditing}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                </div>
+
+              {/* Experience Section */}
+              
+                <div className={styles.section}>
+
+                <h2 className={styles.sectionTitle}>Experience</h2>
+                <p className={styles.sectionSubtitle}>Add your work experience.</p>
+                {/* Experience content */}
+                                {/* Experience Section */}
+                                <div className="mt-8">
+                  <div className="flex justify-between items-center mb-4">
+                    <div></div>
+                    <button
+                      type="button"
+                      onClick={addExperience}
+                      className={styles.addButton}
+                    >
+                      <PlusIcon className="h-5 w-5 mr-2" />
+                      Add Experience
+                    </button>
+                  </div>
+                  {formData.experience.map((exp, idx) => {
+                    const isExpanded = expandedItems.experience.includes(idx);
+                    const isEditing = editingItems.experience.includes(idx);
+                    const currentData = isEditing ? tempFormData.experience[idx] : exp;
+                    
+                    return (
+                      <div key={idx} className={`${styles.itemCard} ${!isExpanded ? styles.itemCardCollapsed : ''}`}>
+                        <div className={styles.itemHeader}>
+                          <div 
+                            className={styles.itemTitle}
+                            onClick={() => !isEditing && toggleExpanded('experience', idx)}
+                          >
+                            {exp.company || 'New Experience'} - {exp.position || 'Position'}
+                          </div>
+                          <div className={styles.itemActions}>
+                            {!isEditing ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => startEditing('experience', idx)}
+                                  className={`${styles.actionButton} ${styles.editButton}`}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeExperience(idx)}
+                                  className={`${styles.actionButton} ${styles.deleteButton}`}
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => saveEditing('experience', idx)}
+                                  className={`${styles.actionButton} ${styles.saveButton}`}
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => cancelEditing('experience', idx)}
+                                  className={`${styles.actionButton} ${styles.cancelButton}`}
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {isExpanded && (
+                          <div className={styles.itemContent}>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor={`company-${idx}`}>Company</Label>
+                                <Input
+                                  id={`company-${idx}`}
+                                  value={currentData.company}
+                                  onChange={(e) => handleExperienceFieldChange(idx, 'company', e.target.value)}
+                                  className={styles.input}
+                                  disabled={!isEditing}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`position-${idx}`}>Position</Label>
+                                <Input
+                                  id={`position-${idx}`}
+                                  value={currentData.position}
+                                  onChange={(e) => handleExperienceFieldChange(idx, 'position', e.target.value)}
+                                  className={styles.input}
+                                  disabled={!isEditing}
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor={`startYear-${idx}`}>Start Year</Label>
+                                  <Input
+                                    id={`startYear-${idx}`}
+                                    type="number"
+                                    value={currentData.startYear}
+                                    onChange={(e) => handleExperienceFieldChange(idx, 'startYear', parseInt(e.target.value))}
+                                    className={styles.input}
+                                    disabled={!isEditing}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor={`endYear-${idx}`}>End Year</Label>
+                                  <Input
+                                    id={`endYear-${idx}`}
+                                    type="number"
+                                    value={currentData.endYear}
+                                    onChange={(e) => handleExperienceFieldChange(idx, 'endYear', parseInt(e.target.value))}
+                                    className={styles.input}
+                                    disabled={!isEditing}
+                                  />
+                                </div>
+                              </div>
+                              <div className="col-span-2">
+                                <Label htmlFor={`description-${idx}`}>Description</Label>
+                                <Textarea
+                                  id={`description-${idx}`}
+                                  value={currentData.description}
+                                  onChange={(e) => handleExperienceFieldChange(idx, 'description', e.target.value)}
+                                  className={styles.input}
+                                  disabled={!isEditing}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Certifications Section */}
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>Certifications</h2>
+                <p className={styles.sectionSubtitle}>Add your certifications.</p>
+                {/* Certifications content */}
+                {/* Certifications */}
+                <div className="mt-8">
+                  <div className="flex justify-between items-center mb-4">
+                    <div></div> 
+                    <button
+                      type="button"
+                      onClick={addCertification}
+                      className={styles.addButton}
+                    >
+                      <PlusIcon className="h-5 w-5 mr-2" />
+                      Add Certification
+                    </button>
+                  </div>
+                  {formData.certifications.map((cert, idx) => {
+                    const isExpanded = expandedItems.certifications.includes(idx);
+                    const isEditing = editingItems.certifications.includes(idx);
+                    const currentData = isEditing ? tempFormData.certifications[idx] : cert;
+                    
+                    return (
+                      <div key={idx} className={`${styles.itemCard} ${!isExpanded ? styles.itemCardCollapsed : ''}`}>
+                        <div className={styles.itemHeader}>
+                          <div 
+                            className={styles.itemTitle}
+                            onClick={() => !isEditing && toggleExpanded('certifications', idx)}
+                          >
+                            {cert.name || 'New Certification'} - {cert.issuer || 'Issuer'}
+                          </div>
+                          <div className={styles.itemActions}>
+                            {!isEditing ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => removeCertification(idx)}
+                                  className={`${styles.actionButton} ${styles.deleteButton}`}
+                                >
+                                  Delete
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => startEditing('certifications', idx)}
+                                  className={`${styles.actionButton} ${styles.editButton}`}
+                                >
+                                  Edit
+                                </button>
+                              
+                              </>
+                            ) : (
+                              <>
+                              <button
+                                  type="button"
+                                  onClick={() => cancelEditing('certifications', idx)}
+                                  className={`${styles.actionButton} ${styles.cancelButton}`}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => saveEditing('certifications', idx)}
+                                  className={`${styles.actionButton} ${styles.saveButton}`}
+                                >
+                                  Save
+                                </button>
+                                
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {isExpanded && (
+                          <div className={styles.itemContent}>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor={`certName-${idx}`}>Name</Label>
+                                <Input
+                                  id={`certName-${idx}`}
+                                  value={currentData.name}
+                                  onChange={(e) => handleCertificationFieldChange(idx, 'name', e.target.value)}
+                                  className={styles.input}
+                                  disabled={!isEditing}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`certIssuer-${idx}`}>Issuing Organization</Label>
+                                <Input
+                                  id={`certIssuer-${idx}`}
+                                  value={currentData.issuer}
+                                  onChange={(e) => handleCertificationFieldChange(idx, 'issuer', e.target.value)}
+                                  className={styles.input}
+                                  disabled={!isEditing}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`certYear-${idx}`}>Year</Label>
+                                <Input
+                                  id={`certYear-${idx}`}
+                                  type="number"
+                                  value={currentData.year}
+                                  onChange={(e) => handleCertificationFieldChange(idx, 'year', parseInt(e.target.value))}
+                                  className={styles.input}
+                                  disabled={!isEditing}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              </div>
+              
+            </>
+          )}
+          <div className="flex justify-end space-x-4 mt-8">
             <Button
               type="button"
-              variant="destructive"
-              onClick={() => removeEducation(index)}
+              variant="outline"
+              onClick={onCancel}
+              disabled={isLoading}
+              className={styles.secondaryButton}
             >
-              Remove
+              Cancel
             </Button>
-          </div>
-        ))}
-      </div>
-
-      {/* Certifications */}
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Certifications</h3>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={addCertification}
-          >
-            Add Certification
-          </Button>
-        </div>
-        {formData.certifications.map((cert, index) => (
-          <div key={index} className="space-y-4 p-4 border rounded-md mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Name</label>
-              <input
-                type="text"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                value={cert.name}
-                onChange={(e) => updateCertification(index, 'name', e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Issuer</label>
-              <input
-                type="text"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                value={cert.issuer}
-                onChange={(e) => updateCertification(index, 'issuer', e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Year</label>
-              <input
-                type="number"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                value={cert.year}
-                onChange={(e) => updateCertification(index, 'year', parseInt(e.target.value))}
-              />
-            </div>
             <Button
-              type="button"
-              variant="destructive"
-              onClick={() => removeCertification(index)}
+              type="submit"
+              disabled={isLoading}
+              className={styles.primaryButton}
             >
-              Remove
+              {isLoading ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
-        ))}
+        </form>
       </div>
-
-      {/* Submit and Cancel Buttons */}
-      <div className="flex justify-end space-x-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isLoading}
-        >
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          disabled={isLoading}
-        >
-          {isLoading ? 'Saving...' : 'Save Changes'}
-        </Button>
-      </div>
-    </form>
+    </div>
   );
 }
+
+

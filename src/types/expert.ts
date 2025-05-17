@@ -2,27 +2,27 @@ import { type Booking } from './booking';
 import { type SerializedUser } from './user';
 
 export interface Education {
-  id: string;
-  school: string;
+  id?: string;
+  institution: string;
   degree: string;
   field: string;
   startYear: number;
   endYear: number;
-  expertId: string;
-  createdAt: string;
-  updatedAt: string;
+  expertId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Experience {
-  id: string;
+  id?: string;
   company: string;
   position: string;
   description: string;
   startYear: number;
   endYear?: number;
-  expertId: string;
-  createdAt: string;
-  updatedAt: string;
+  expertId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Certification {
@@ -31,6 +31,8 @@ export interface Certification {
   issuer: string;
   year: number;
   expertId: string;
+  issuingOrganization: string;
+  issueDate: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -96,6 +98,7 @@ export interface SerializedExpert {
   rating: number;
   reviews: Review[];
   availableTimeSlots: TimeSlot[];
+  bookings: Booking[];
   createdAt: string;
   updatedAt: string;
 }
@@ -118,6 +121,7 @@ export function serializeExpert(expert: ExpertProfileWithBookings): SerializedEx
     rating: expert.rating,
     reviews: expert.reviews,
     availableTimeSlots: expert.availableTimeSlots,
+    bookings: expert.bookings,
     createdAt: expert.createdAt,
     updatedAt: expert.updatedAt,
   };

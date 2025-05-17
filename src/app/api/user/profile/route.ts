@@ -4,8 +4,10 @@ import { prisma } from '@/lib/prisma';
 import type { User } from '@/types/user';
 import type { Expert } from '@/types/expert';
 
-interface UserWithExpertProfile extends User {
+interface UserWithExpertProfile extends Omit<User, 'createdAt' | 'updatedAt'> {
   expertProfile?: Expert;
+  createdAt: string;
+  updatedAt: string;
 }
 import { serializeExpert } from '@/types/expert';
 import { z } from 'zod';
@@ -39,7 +41,7 @@ export async function GET() {
       );
     }
 
-    const user = (await prisma.user.findUnique({
+    const userFromDb = await prisma.user.findUnique({
       where: { id: payload.userId },
       include: {
         expertProfile: {
@@ -61,7 +63,20 @@ export async function GET() {
           }
         }
       }
-    })) as UserWithExpertProfile;
+    });
+
+    if (!userFromDb) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const user: UserWithExpertProfile = {
+      ...userFromDb,
+      createdAt: userFromDb.createdAt instanceof Date ? userFromDb.createdAt.toISOString() : userFromDb.createdAt,
+      updatedAt: userFromDb.updatedAt instanceof Date ? userFromDb.updatedAt.toISOString() : userFromDb.updatedAt,
+    };
 
     if (!user) {
       return NextResponse.json(
@@ -71,13 +86,14 @@ export async function GET() {
     }
 
     // Base user data that everyone can see
-    const response: any = {
+    const response: UserWithExpertProfile = {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       image: user.image,
       isExpert: user.isExpert,
+      password: user.password,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     };

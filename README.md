@@ -26,7 +26,7 @@ Experlo is a modern web platform that connects learners with experts in various 
 
 ### Backend
 - Node.js with Express.js
-- MongoDB for data storage
+- PostgreSQL with Prisma ORM
 - WebRTC for video calling
 - Socket.io for real-time communication
 
@@ -59,7 +59,7 @@ Experlo is a modern web platform that connects learners with experts in various 
 ### Prerequisites
 
 - Node.js 18.x or later
-- MongoDB instance
+- PostgreSQL database
 - Stripe account for payments
 
 ### Installation
@@ -78,7 +78,7 @@ npm install
 3. Set up environment variables:
 Create a `.env.local` file in the root directory with the following variables:
 ```env
-MONGODB_URI=your_mongodb_uri
+DATABASE_URL=your_postgresql_url
 NEXTAUTH_SECRET=your_nextauth_secret
 STRIPE_SECRET_KEY=your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret

@@ -23,12 +23,12 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white shadow-sm">
+    <header className="bg-white shadow-sm fixed w-full top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/dashboard" className="text-2xl font-bold text-indigo-600">
+              <Link href="/dashboard" className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hover:from-indigo-500 hover:to-purple-500 transition-all">
                 experlo
               </Link>
             </div>
@@ -36,16 +36,18 @@ export default function Header() {
 
           <div className="flex items-center">
             <Menu as="div" className="relative ml-3">
-              <Menu.Button className="flex items-center max-w-xs bg-white rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                {user.image ? (
-                  <img
-                    src={user.image}
-                    alt={`${user.firstName} ${user.lastName}`}
-                    className="h-8 w-8 rounded-full"
-                  />
-                ) : (
-                  <UserCircleIcon className="h-8 w-8 text-gray-400" />
-                )}
+              <Menu.Button className="flex items-center max-w-xs bg-white rounded-full hover:ring-2 hover:ring-indigo-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <div className="relative">
+                  {user.image ? (
+                    <img
+                      src={user.image}
+                      alt={`${user.firstName} ${user.lastName}`}
+                      className="h-9 w-9 rounded-full object-cover border-2 border-white shadow-sm"
+                    />
+                  ) : (
+                    <UserCircleIcon className="h-9 w-9 text-indigo-600 cursor-pointer" />
+                  )}
+                </div>
               </Menu.Button>
 
               <Transition
@@ -57,35 +59,28 @@ export default function Header() {
                 leaveFrom="transform opacity-100 scale-100"
                 leaveTo="transform opacity-0 scale-95"
               >
-                <Menu.Items className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none">
-                  <div className="py-1">
+                <Menu.Items className="origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden border border-gray-100">
+                  <div className="py-2 px-1">
+                    <div className="px-3 py-2 mb-1">
+                      <p className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName}</p>
+                    </div>
+                    <div className="h-px bg-gray-100 my-1"></div>
                     <Menu.Item>
                       {({ active }) => (
                         <Link
-                          href="/dashboard/profile"
-                          className={`${active ? 'bg-gray-100' : ''} block px-4 py-2 text-sm text-gray-700`}
+                          href="/profile"
+                          className={`${active ? 'bg-gray-50' : ''} block px-3 py-2 text-sm text-gray-700 rounded-md mx-1 transition-colors duration-150 hover:bg-gray-50`}
                         >
                           Your Profile
                         </Link>
                       )}
                     </Menu.Item>
-                    {user.isExpert ? (
-                      <Menu.Item>
-                        {({ active }) => (
-                          <Link
-                            href="/expert/profile"
-                            className={`${active ? 'bg-gray-100' : ''} block px-4 py-2 text-sm text-gray-700`}
-                          >
-                            Expert Profile
-                          </Link>
-                        )}
-                      </Menu.Item>
-                    ) : (
+                    {!user.isExpert && (
                       <Menu.Item>
                         {({ active }) => (
                           <Link
                             href="/become-expert"
-                            className={`${active ? 'bg-gray-100' : ''} block px-4 py-2 text-sm text-gray-700`}
+                            className={`${active ? 'bg-gray-50' : ''} block px-3 py-2 text-sm text-gray-700 rounded-md mx-1 transition-colors duration-150 hover:bg-gray-50`}
                           >
                             Become an Expert
                           </Link>
@@ -96,7 +91,7 @@ export default function Header() {
                       {({ active }) => (
                         <Link
                           href="/settings"
-                          className={`${active ? 'bg-gray-100' : ''} block px-4 py-2 text-sm text-gray-700`}
+                          className={`${active ? 'bg-gray-50' : ''} block px-3 py-2 text-sm text-gray-700 rounded-md mx-1 transition-colors duration-150 hover:bg-gray-50`}
                         >
                           Settings
                         </Link>
@@ -106,7 +101,7 @@ export default function Header() {
                       {({ active }) => (
                         <button
                           onClick={handleLogout}
-                          className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}
+                          className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700 cursor-pointer`}
                         >
                           Sign Out
                         </button>

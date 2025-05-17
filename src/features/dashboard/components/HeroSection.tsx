@@ -27,7 +27,7 @@ export default function HeroSection() {
             <div className="mt-8 flex gap-4">
               <a
                 href="/experts"
-                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-indigo-600 bg-white hover:bg-gray-50"
+                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-indigo-600 bg-white hover:bg-gray-50 cursor-pointer"
               >
                 Browse Experts
               </a>

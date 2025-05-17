@@ -1,177 +1,158 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import Image from 'next/image';
-import { User } from '@/types/user';
+import React, { useState, useRef } from 'react';
+import { SerializedUser } from '@/types/user';
 import { SerializedExpert } from '@/types/expert';
+import Image from 'next/image';
+import EditExpertProfile from './EditExpertProfile';
+import { ClockIcon, StarIcon, CalendarIcon, MapPinIcon } from '@heroicons/react/24/solid';
+import Header from '@/shared/components/ui/Header';
 import { Button } from '@/shared/components/ui/Button';
 import Link from 'next/link';
-import EditExpertProfile from './EditExpertProfile';
 
 interface UserProfileProps {
-  user: Partial<User>;
-  expertData?: SerializedExpert | null;
-  isOwnProfile?: boolean;
+  user: SerializedUser;
+  expertData?: SerializedExpert;
+  isOwnProfile: boolean;
+  error?: string;
 }
 
-export default function UserProfile({ user, expertData, isOwnProfile = false }: UserProfileProps) {
+interface FormData {
+  firstName: string;
+  lastName: string;
+  image: string;
+}
+
+interface UploadResponse {
+  url: string;
+  error?: string;
+}
+
+export default function UserProfile({ user, expertData: initialExpertData, isOwnProfile }: UserProfileProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [isEditingExpert, setIsEditingExpert] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [expertData, setExpertData] = useState<SerializedExpert | undefined>(initialExpertData);
+
+  const [isEditingExpert, setIsEditingExpert] = useState(false);
+
+  const handleCancelEdit = () => setIsEditing(false);
+
+  const handleSaveExpert = async (formData: FormData) => {
+    setIsLoading(true);
+    try {
+      // TODO: Implement save logic
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to save expert profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     firstName: user.firstName || '',
     lastName: user.lastName || '',
-    image: user.image || '',
+    image: user.image || ''
   });
   const [previewUrl, setPreviewUrl] = useState<string | null>(user.image || null);
 
   const handleImageClick = () => {
-    if (isOwnProfile && isEditing) {
+    if (isOwnProfile && !isEditing) {
       fileInputRef.current?.click();
     }
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        setIsLoading(true);
-        setError('');
+    if (!e.target.files || !e.target.files[0]) return;
 
-        // Create preview
-        setPreviewUrl(URL.createObjectURL(file));
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
 
-        // Upload image
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
 
-        if (!uploadRes.ok) {
-          throw new Error('Failed to upload image');
-        }
+      const data: UploadResponse = await response.json();
 
-        const { url } = await uploadRes.json();
-        setFormData(prev => ({ ...prev, image: url }));
-
-        // Update profile with new image
-        const res = await fetch('/api/user/profile', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ image: url }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || 'Failed to update profile');
-        }
-
-        // Force session update
-        await fetch('/api/auth/session?update=true');
-      } catch (err) {
-        console.error('Error uploading image:', err);
-        setError(err instanceof Error ? err.message : 'Failed to upload image');
-        // Reset preview on error
-        setPreviewUrl(user.image || null);
-      } finally {
-        setIsLoading(false);
+      if (data.error) {
+        setError(data.error);
+        return;
       }
+
+      setFormData(prev => ({ ...prev, image: data.url }));
+      setPreviewUrl(data.url);
+    } catch (err) {
+      setError('Error uploading image');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
+  const handleSubmit = async () => {
     try {
-      const res = await fetch('/api/user/profile', {
+      setIsLoading(true);
+      const response = await fetch('/api/user/profile', {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData)
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to update profile');
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
       }
 
-      // Force session update
-      await fetch('/api/auth/session?update=true');
       setIsEditing(false);
-      window.location.reload();
     } catch (err) {
-      console.error('Error updating profile:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
+      setError('Error updating profile');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div>
+      <Header />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-16">
+        <div className="space-y-8">
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
 
-        {/* Profile Header */}
-        <div className="bg-white shadow rounded-lg mb-6">
-          <div className="px-4 py-5 sm:p-6">
+        <div className="relative bg-gray-50 shadow-sm rounded-2xl overflow-hidden">
+          {expertData && (
+            <div className="absolute top-4 right-4 bg-[#4f46e5] text-white px-3 py-1.5 rounded-full text-sm font-medium">
+              ${expertData.pricePerHour}/hr
+            </div>
+          )}
+          <div className="p-8">
             <div className="flex items-start space-x-6">
-              {/* Profile Picture */}
               <div className="relative">
                 <div 
-                  className={`h-32 w-32 rounded-full overflow-hidden bg-gray-100 ${isOwnProfile && isEditing ? 'cursor-pointer hover:opacity-80' : ''}`}
+                  className={`h-32 w-32 bg-[#4f46e5] rounded-lg overflow-hidden flex-shrink-0 ${isOwnProfile ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
                   onClick={handleImageClick}
                 >
                   {(previewUrl || user.image) ? (
                     <Image
                       src={previewUrl || user.image!}
                       alt={`${formData.firstName} ${formData.lastName}'s profile picture`}
-                      width={128}
-                      height={128}
-                      className="h-full w-full object-cover"
+                      fill
+                      className="object-cover"
                     />
                   ) : (
-                    <div className="h-full w-full flex items-center justify-center bg-gray-200">
-                      <span className="text-4xl text-gray-500">
-                        {formData.firstName[0]?.toUpperCase() || '?'}
+                    <div className="h-full w-full flex items-center justify-center">
+                      <span className="text-4xl font-semibold text-white">
+                        {`${formData.firstName[0]?.toUpperCase() || ''}${formData.lastName[0]?.toUpperCase() || ''}`}
                       </span>
-                    </div>
-                  )}
-                  {isOwnProfile && isEditing && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
-                      <svg
-                        className="h-8 w-8 text-white"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
                     </div>
                   )}
                 </div>
@@ -184,200 +165,206 @@ export default function UserProfile({ user, expertData, isOwnProfile = false }: 
                 />
               </div>
 
-              {/* Profile Info */}
               <div className="flex-1">
-                <div className="flex items-center justify-between">
+                <div className="flex justify-between items-start">
                   <div>
                     {isEditing ? (
-                      <>
-                        <input
-                          type="text"
-                          value={formData.firstName}
-                          onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                          placeholder="First name"
-                        />
-                        <input
-                          type="text"
-                          value={formData.lastName}
-                          onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                          placeholder="Last name"
-                        />
-                      </>
+                      <div className="space-y-4">
+                        <div className="flex space-x-4">
+                          <input
+                            type="text"
+                            value={formData.firstName}
+                            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            placeholder="First name"
+                          />
+                          <input
+                            type="text"
+                            value={formData.lastName}
+                            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            placeholder="Last name"
+                          />
+                        </div>
+                        <div className="flex space-x-4">
+                          <button
+                            type="button"
+                            onClick={() => setIsEditing(false)}
+                            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSubmit}
+                            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            disabled={isLoading}
+                          >
+                            {isLoading ? 'Saving...' : 'Save'}
+                          </button>
+                        </div>
+                      </div>
                     ) : (
-                      <h1 className="text-2xl font-bold text-gray-900">{`${formData.firstName} ${formData.lastName}`}</h1>
-                    )}
-                    {user.isExpert && (
-                      <div className="mt-1 flex items-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                          Expert
-                        </span>
-                        {expertData && (
-                          <span className="ml-2 text-sm text-gray-500">
-                            ${expertData.pricePerHour}/hour
-                          </span>
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <h1 className="text-2xl font-semibold text-gray-900">
+                            {`${formData.firstName} ${formData.lastName}`}
+                          </h1>
+                          {user.isExpert && (
+                            <span className="bg-indigo-100 text-indigo-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
+                              Expert
+                            </span>
+                          )}
+                        </div>
+                        {expertData?.title && (
+                          <p className="text-lg text-gray-600 mt-1.5">{expertData.title}</p>
                         )}
+                        <div className="mt-6 flex flex-col sm:flex-row sm:flex-wrap sm:space-x-8">
+                          {expertData && (
+                            <>
+                              <div className="mt-2 flex items-center text-sm text-gray-500">
+                                <StarIcon className="mr-1.5 h-5 w-5 flex-shrink-0 text-yellow-400" />
+                                <p>{expertData.rating?.toFixed(1) || '5.0'} ({expertData.totalBookings || '0'} reviews)</p>
+                              </div>
+                              <div className="mt-2 flex items-center text-sm text-gray-500">
+                                <CalendarIcon className="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />
+                                <p>{expertData.bookings?.filter(b => b.status === 'COMPLETED').length || '0'} sessions completed</p>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        <div className="mt-6 flex flex-wrap gap-2">
+                        {expertData?.categories?.map((category, index) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1 text-sm font-medium text-[#4f46e5] bg-indigo-50 rounded-full"
+                          >
+                            {category}
+                          </span>
+                        ))}
+                      </div>
                       </div>
                     )}
                   </div>
-                  {isOwnProfile && (
-                    <div className="flex space-x-3">
-                      {isEditing ? (
-                        <>
-                          <Button
-                            variant="secondary"
-                            onClick={() => {
-                              setIsEditing(false);
-                              setFormData({
-                                firstName: user.firstName || '',
-                                lastName: user.lastName || '',
-                                image: user.image || ''
-                              });
-                              setPreviewUrl(user.image || null);
-                            }}
-                            disabled={isLoading}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            variant="default"
-                            onClick={handleSubmit}
-                            disabled={isLoading}
-                          >
-                            {isLoading ? 'Saving...' : 'Save Changes'}
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button variant="secondary" onClick={() => setIsEditing(true)}>
-                            Edit Profile
-                          </Button>
-                          {user.isExpert && expertData && (
-                            <Button variant="secondary" onClick={() => setIsEditingExpert(true)}>
-                              Edit Expert Profile
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
                 </div>
 
-                {/* Bio */}
-                {isEditingExpert && expertData ? (
-                  <EditExpertProfile
-                    expertData={expertData}
-                    onCancel={() => setIsEditingExpert(false)}
-                    onSave={() => {
-                      setIsEditingExpert(false);
-                      window.location.reload();
-                    }}
-                  />
-                ) : (
-                  <>
-                    {expertData?.bio && (
-                      <div className="mt-4">
-                        <p className="text-sm text-gray-500">{expertData.bio}</p>
+                {/* About section */}
+                <div className="mt-8 flex justify-between items-start">
+                  <div className="flex-1">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-4">About</h2>
+                    <div className="prose max-w-none text-gray-600">
+                      {expertData?.bio || 'No bio provided yet.'}
+                    </div>
+                    {isOwnProfile && expertData && (
+                      <div className="flex justify-end mt-4">
+                        <button
+                          onClick={() => setIsEditing(true)}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#4f46e5] hover:bg-[4f46e5] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
+                        >
+                          Edit Profile
+                        </button>
                       </div>
                     )}
-
-                    {/* Expertise Areas */}
-                    {expertData?.categories && expertData.categories.length > 0 && (
-                      <div className="mt-4">
-                        <h3 className="text-sm font-medium text-gray-500">Expertise</h3>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {expertData.categories.map((area: string, index: number) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                            >
-                              {area}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+                    {isEditing && expertData && (
+                      <EditExpertProfile
+                        userData={user}
+                        expertData={expertData}
+                        onCancel={handleCancelEdit}
+                        onSave={handleSaveExpert}
+                        isLoading={isLoading}
+                      />
                     )}
-                  </>
-                )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Profile Content */}
-        <div className="bg-white shadow rounded-lg divide-y divide-gray-200">
-          {/* Education */}
-          {expertData?.education && expertData.education.length > 0 && (
-            <div className="p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Education</h2>
-              <ul className="space-y-4">
-                {expertData.education.map((edu, index) => (
-                  <li key={index} className="flex justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{edu.school}</p>
-                      <div className="text-gray-600">
-                        {edu.school}, {edu.degree} in {edu.field} ({edu.startYear}-{edu.endYear})
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-500">{edu.startYear}-{edu.endYear}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Certifications */}
-          {expertData?.certifications && expertData.certifications.length > 0 && (
-            <div className="p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Certifications</h2>
-              <ul className="space-y-4">
-                {expertData.certifications.map((cert, index) => (
-                  <li key={index} className="flex justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{cert.name}</p>
-                      <p className="text-sm text-gray-500">{cert.issuer}</p>
-                    </div>
-                    <p className="text-sm text-gray-500">{cert.year}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Contact Information */}
-          {isOwnProfile && (
-            <div className="p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Contact Information</h2>
-              <dl className="grid grid-cols-1 gap-x-4 gap-y-6">
+        {/* Right Column - Booking */}
+        {!isOwnProfile && expertData && (
+          <div className="mt-8">
+            <div className="bg-gray-50 shadow-sm rounded-2xl p-8 sticky top-6">
+              <div className="space-y-6">
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Email</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{user.email}</dd>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Book a Session</h3>
+                  <p className="text-sm text-gray-500">Schedule a one-on-one consultation</p>
                 </div>
 
-              </dl>
-            </div>
-          )}
-
-          {/* Account Settings - Only visible to the profile owner */}
-          {isOwnProfile && (
-            <div className="p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Account Settings</h2>
-              <div className="space-y-4">
-                <Button variant="secondary">Change Password</Button>
-                {!user.isExpert && (
-                  <div>
-                    <Link href="/become-expert" passHref>
-                      <Button variant="default">Become an Expert</Button>
-                    </Link>
-                    <p className="mt-2 text-sm text-gray-500">
-                      Share your expertise and earn by helping others
-                    </p>
+                <div className="flex items-center justify-between py-3 border-y border-gray-100">
+                  <div className="flex items-center space-x-2">
+                    <ClockIcon className="h-5 w-5 text-gray-400" />
+                    <span className="text-sm text-gray-600">60-minute session</span>
                   </div>
-                )}
+                  <span className="text-lg font-semibold text-gray-900">${expertData.pricePerHour}</span>
+                </div>
+
+                <button
+                  className="w-full bg-[#4f46e5] hover:bg-[#4338ca] text-white px-4 py-2 rounded-md font-medium"
+                >
+                  Book Now
+                </button>
+
+                <div className="text-sm text-gray-500 text-center">
+                  <p>Free cancellation up to 24 hours before your session</p>
+                </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
+
+        {/* Professional Info - Only visible for experts */}
+        {expertData && (
+          <div className="bg-gray-50 shadow-sm rounded-2xl p-8 mt-8">
+            {expertData.education && expertData.education.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Education</h2>
+                <div className="space-y-4">
+                  {expertData.education.map((edu, index) => (
+                    <div key={index} className="border-l-2 border-indigo-200 pl-4">
+                      <h3 className="font-medium text-gray-900">{edu.degree}</h3>
+                      <p className="text-gray-600">{edu.institution}</p>
+                      <p className="text-sm text-gray-500">{edu.endYear}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {expertData.experience && expertData.experience.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Experience</h2>
+                <div className="space-y-4">
+                  {expertData.experience.map((exp, index) => (
+                    <div key={index} className="border-l-2 border-indigo-200 pl-4">
+                      <h3 className="font-medium text-gray-900">{exp.position}</h3>
+                      <p className="text-gray-600">{exp.company}</p>
+                      <p className="text-sm text-gray-500">{exp.endYear}</p>
+                      <p className="text-gray-600 mt-1">{exp.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {expertData.certifications && expertData.certifications.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Certifications</h2>
+                <div className="space-y-4">
+                  {expertData.certifications.map((cert, index) => (
+                    <div key={index} className="border-l-2 border-indigo-200 pl-4">
+                      <h3 className="font-medium text-gray-900">{cert.name}</h3>
+                      <p className="text-gray-600">{cert.issuer}</p>
+                      <p className="text-sm text-gray-500">{cert.year}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Edit button moved next to About section */}
         </div>
       </div>
     </div>

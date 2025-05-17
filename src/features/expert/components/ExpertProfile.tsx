@@ -21,6 +21,7 @@ export default function ExpertProfile({ expert }: ExpertProfileProps) {
     certifications,
     totalBookings,
     rating = 5,
+    bookings = [],
   } = expert;
 
   return (
@@ -63,6 +64,10 @@ export default function ExpertProfile({ expert }: ExpertProfileProps) {
                               <StarIcon className="h-5 w-5" />
                               <span className="ml-1 font-medium">{rating.toFixed(1)}</span>
                               <span className="text-gray-500 ml-1">({totalBookings} reviews)</span>
+                            </div>
+                            <div className="flex items-center text-gray-600">
+                              <CalendarIcon className="h-5 w-5 mr-1.5" />
+                              <span>{bookings?.filter(b => b.status === 'COMPLETED').length || 0} sessions completed</span>
                             </div>
                           </div>
                         </div>
@@ -146,7 +151,7 @@ export default function ExpertProfile({ expert }: ExpertProfileProps) {
                       {edu.startYear} - {edu.endYear}
                     </div>
                     <div className="font-medium text-gray-900">{edu.degree}</div>
-                    <div className="text-gray-600">{edu.school}</div>
+                    <div className="text-gray-600">{edu.institution}</div>
                     <div className="text-gray-600">{edu.field}</div>
                   </div>
                 ))}
