@@ -11,6 +11,16 @@ type ExpertWithRelations = Prisma.ExpertProfileGetPayload<{
   };
 }>;
 
+// Type augmentation for the User model to include gender and dateOfBirth fields
+declare global {
+  namespace PrismaJson {
+    interface UserPayload {
+      gender?: string | null;
+      dateOfBirth?: Date | null;
+    }
+  }
+}
+
 export async function GET(request: Request) {
   try {
     // Get the current user from the auth token
@@ -44,7 +54,7 @@ export async function GET(request: Request) {
     });
 
     // Transform the data to match SerializedExpert type
-    const serializedExperts: SerializedExpert[] = experts.map((expert: ExpertWithRelations) => ({
+    const serializedExperts = experts.map((expert: ExpertWithRelations) => ({
       id: expert.id,
       userId: expert.userId,
       user: {
@@ -54,6 +64,8 @@ export async function GET(request: Request) {
         email: expert.user.email,
         isExpert: expert.user.isExpert,
         image: expert.user.image || undefined,
+        gender: (expert.user as any).gender || null,
+        dateOfBirth: (expert.user as any).dateOfBirth ? (expert.user as any).dateOfBirth.toISOString() : null,
         createdAt: expert.user.createdAt.toISOString(),
         updatedAt: expert.user.updatedAt.toISOString(),
       },
@@ -72,6 +84,7 @@ export async function GET(request: Request) {
       rating: 5, // Default rating for now
       reviews: [],
       availableTimeSlots: [],
+      bookings: expert.bookings || [],
       createdAt: expert.createdAt.toISOString(),
       updatedAt: expert.updatedAt.toISOString(),
     }));

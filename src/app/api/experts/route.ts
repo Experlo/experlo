@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { type Prisma } from '@prisma/client';
 import { type SerializedExpert } from '@/types/expert';
 import { verifyToken, getAuthToken } from '@/lib/auth/jwt';
 import type { User } from '@/types/user';
@@ -65,6 +66,8 @@ export async function GET(request: Request) {
         email: expert.user.email,
         isExpert: expert.user.isExpert,
         image: expert.user.image || undefined,
+        gender: expert.user.gender || null,
+        dateOfBirth: expert.user.dateOfBirth ? expert.user.dateOfBirth.toISOString() : null,
         createdAt: expert.user.createdAt.toISOString(),
         updatedAt: expert.user.updatedAt.toISOString(),
       },
@@ -83,6 +86,7 @@ export async function GET(request: Request) {
       rating: 5, // Default rating for now
       reviews: [],
       availableTimeSlots: [],
+      bookings: expert.bookings || [],
       createdAt: expert.createdAt.toISOString(),
       updatedAt: expert.updatedAt.toISOString(),
     }));
@@ -120,7 +124,7 @@ export async function POST(request: Request) {
     // Validate required fields
     if (!title || !bio || !categories || categories.length === 0 || !pricePerHour) {
       return NextResponse.json(
-        { message: 'Missing required fields' },
+        { error: 'Missing required fields. Please fill in all required information.' },
         { status: 400 }
       );
     }
@@ -155,11 +159,15 @@ export async function POST(request: Request) {
 
       // Create education records
       const educationRecords = await Promise.all(
-        education.map((edu: EducationInput) => {
+        education.map((edu: any) => {
           return tx.education.create({
             data: {
               expert: { connect: { id: expertProfile.id } },
-              ...edu
+              school: edu.institution || edu.school || '',  // Handle both institution and school fields
+              degree: edu.degree || '',
+              field: edu.field || '',
+              startYear: edu.startYear || 0,
+              endYear: edu.endYear || 0
             }
           });
         })
@@ -167,11 +175,15 @@ export async function POST(request: Request) {
 
       // Create experience records
       const experienceRecords = await Promise.all(
-        experience.map((exp: ExperienceInput) => {
+        experience.map((exp: any) => {
           return tx.experience.create({
             data: {
               expert: { connect: { id: expertProfile.id } },
-              ...exp
+              company: exp.company || '',
+              position: exp.position || '',
+              description: exp.description || '',
+              startYear: exp.startYear || 0,
+              endYear: exp.endYear || null
             }
           });
         })
@@ -179,11 +191,13 @@ export async function POST(request: Request) {
 
       // Create certification records
       const certificationRecords = await Promise.all(
-        certifications.map((cert: CertificationInput) => {
+        certifications.map((cert: any) => {
           return tx.certification.create({
             data: {
               expert: { connect: { id: expertProfile.id } },
-              ...cert
+              name: cert.name || '',
+              issuer: cert.issuingOrganization || cert.issuer || '',
+              year: parseInt(cert.issueDate?.split('-')[0]) || new Date().getFullYear()
             }
           });
         })
@@ -203,11 +217,7 @@ export async function POST(request: Request) {
       };
     });
 
-    // Update user isExpert status
-    await prisma.user.update({
-      where: { id: payload.userId },
-      data: { isExpert: true }
-    });
+    // User isExpert status was already updated in the transaction
 
     // Transform to SerializedExpert type
     const serializedExpert: SerializedExpert = {
@@ -243,6 +253,7 @@ export async function POST(request: Request) {
         createdAt: cert.createdAt.toISOString(),
         updatedAt: cert.updatedAt.toISOString()
       })),
+      bookings: [], // Add missing bookings property
       totalBookings: 0,
       totalConsultationMinutes: 0,
       rating: 5,
@@ -255,8 +266,9 @@ export async function POST(request: Request) {
     return NextResponse.json(serializedExpert);
   } catch (error) {
     console.error('Error creating expert profile:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { message: 'Failed to create expert profile' },
+      { error: `Failed to create expert profile: ${errorMessage}` },
       { status: 500 }
     );
   }

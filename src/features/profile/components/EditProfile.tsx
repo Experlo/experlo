@@ -38,6 +38,8 @@ interface FormData {
   lastName: string;
   email: string;
   image: string;
+  gender?: string | null;
+  dateOfBirth?: string | null;
   title?: string;
   bio?: string;
   categories: string[];
@@ -56,21 +58,39 @@ interface EditProfile {
 }
 
 export default function EditProfile({ userData, expertData, onCancel, onSave, isLoading = false }: EditProfile): React.ReactElement {
+  // Debug user data
+  console.log('User data in edit profile:', userData);
   // Check if user is an expert
   const isExpert = !!expertData;
+
+  // Format date of birth for the date input (YYYY-MM-DD format)
+  const formatDateForInput = (dateString: string | null | undefined) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '';
+    }
+  };
 
   const [formData, setFormData] = useState<FormData>({
     firstName: userData.firstName || '',
     lastName: userData.lastName || '',
     email: userData.email || '',
     image: userData.image || '',
+    gender: userData.gender || null,
+    dateOfBirth: formatDateForInput(userData.dateOfBirth),
     title: isExpert && expertData?.title ? expertData.title : '',
     bio: isExpert && expertData?.bio ? expertData.bio : '',
     categories: isExpert && expertData?.categories ? expertData.categories : [],
     pricePerHour: isExpert && expertData?.pricePerHour ? expertData.pricePerHour : 0,
     education: isExpert && expertData?.education ? expertData.education.map(item => ({
       ...item,
-      id: item.id || generateId()
+      id: item.id || generateId(),
+      // Map school to institution if institution is not present
+      institution: item.institution || item.school || ''
     })) : [],
     experience: isExpert && expertData?.experience ? expertData.experience.map(item => ({
       ...item,
@@ -392,6 +412,53 @@ export default function EditProfile({ userData, expertData, onCancel, onSave, is
               <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className={styles.fieldGroup}>
+                <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                <Input
+                  id="dateOfBirth"
+                  name="dateOfBirth"
+                  type="date"
+                  value={formData.dateOfBirth || ''}
+                  onChange={handleInputChange}
+                  className={styles.input}
+                />
+              </div>
+              <div className={styles.fieldGroup}>
+                <Label htmlFor="gender">Gender</Label>
+                <div className="flex space-x-4 mt-2">
+                  <div className="flex items-center">
+                    <input
+                      id="gender-male"
+                      name="gender"
+                      type="radio"
+                      value="male"
+                      checked={formData.gender === 'male'}
+                      onChange={handleInputChange}
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    />
+                    {/* Debug info rendered separately */}
+                    <label htmlFor="gender-male" className="ml-2 block text-sm text-gray-700">
+                      Male
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      id="gender-female"
+                      name="gender"
+                      type="radio"
+                      value="female"
+                      checked={formData.gender === 'female'}
+                      onChange={handleInputChange}
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    />
+                    <label htmlFor="gender-female" className="ml-2 block text-sm text-gray-700">
+                      Female
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {isExpert && (
               <>

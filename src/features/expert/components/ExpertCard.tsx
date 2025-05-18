@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { StarIcon } from '@heroicons/react/24/solid';
 import { SerializedExpert } from '@/types/expert';
+import { SerializedUser } from '@/types/user';
 
 interface ExpertCardProps {
   expert: SerializedExpert;
@@ -13,7 +14,7 @@ interface ExpertCardProps {
 export default function ExpertCard({ expert }: ExpertCardProps) {
   const {
     id,
-    user: { firstName, lastName, image },
+    user: { firstName, lastName, image, gender },
     title,
     pricePerHour,
     rating,
@@ -24,18 +25,22 @@ export default function ExpertCard({ expert }: ExpertCardProps) {
   return (
     <Link href={`/experts/${id}`} className="block group h-full">
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200 h-full flex flex-col">
-        {/* Expert Image */}
-        <div className="relative h-60 w-full bg-gradient-to-r from-[#6366f1] to-[#4f46e5]">
+        {/* Expert Image - Pink background for female experts, blue for male */}
+        <div className="relative h-60 w-full flex items-center justify-center bg-gray-50 p-4">
           {image ? (
-            <Image
-              src={image}
-              alt={`${firstName} ${lastName}`}
-              fill
-              className="object-cover"
-            />
+            <div className="relative h-32 w-32 rounded-full overflow-hidden shadow-lg">
+              <Image
+                src={image}
+                alt={`${firstName} ${lastName}`}
+                fill
+                className="object-cover"
+                // Handle both local and S3 URLs
+                unoptimized={image.startsWith('/uploads')}
+              />
+            </div>
           ) : (
-            <div className="h-full w-full flex items-center justify-center">
-              <span className="text-4xl font-semibold text-white">
+            <div className={`h-32 w-32 rounded-full overflow-hidden shadow-lg flex items-center justify-center ${gender?.toLowerCase() === 'female' ? 'bg-gradient-to-br from-[#ec4899] to-[#db2777]' : 'bg-gradient-to-br from-[#6366f1] to-[#4f46e5]'}`}>
+              <span className="text-2xl font-semibold text-white">
                 {`${firstName[0]}${lastName[0]}`}
               </span>
             </div>
@@ -47,7 +52,7 @@ export default function ExpertCard({ expert }: ExpertCardProps) {
 
         {/* Expert Info */}
         <div className="p-6 flex-1 flex flex-col">
-          <div className="flex flex-col space-y-2 flex-1">
+          <div className="flex flex-col space-y-2 mb-6 flex-1">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">{`${firstName} ${lastName}`}</h3>
@@ -60,7 +65,7 @@ export default function ExpertCard({ expert }: ExpertCardProps) {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {categories.slice(0, 3).map((category, index) => {
+              {categories.slice(0, 4).map((category, index) => {
                 return (
                   <span
                     key={index}
@@ -70,14 +75,13 @@ export default function ExpertCard({ expert }: ExpertCardProps) {
                   </span>
                 );
               })}
-              {categories.length > 3 && (
+              {categories.length > 4 && (
                 <span className="text-xs text-gray-500">
-                  +{categories.length - 3} more
+                  +{categories.length - 4} more
                 </span>
               )}
             </div>
           </div>
-
           <button className="mt-auto w-full bg-[#4f46e5] hover:bg-[#4338ca] text-white px-6 py-3 rounded-xl font-medium transition-colors duration-200">
             Book Now
           </button>

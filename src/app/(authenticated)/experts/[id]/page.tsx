@@ -44,10 +44,11 @@ export default async function ExpertPage({ params: paramsPromise }: ExpertPagePr
       id: expert.user.id,
       firstName: expert.user.firstName,
       lastName: expert.user.lastName,
-
       email: expert.user.email,
       isExpert: expert.user.isExpert,
       image: expert.user.image || undefined,
+      gender: expert.user.gender, // Add missing gender field
+      dateOfBirth: expert.user.dateOfBirth, // Add missing dateOfBirth field
       createdAt: expert.user.createdAt,
       updatedAt: expert.user.updatedAt,
     },
@@ -64,6 +65,7 @@ export default async function ExpertPage({ params: paramsPromise }: ExpertPagePr
     rating: averageRating,
     reviews: expert.reviews,
     availableTimeSlots: expert.availableTimeSlots,
+    bookings: expert.bookings, // Add missing bookings field
     createdAt: typeof expert.createdAt === 'object' && expert.createdAt !== null ? (expert.createdAt as Date).toISOString() : expert.createdAt,
     updatedAt: typeof expert.updatedAt === 'object' && expert.updatedAt !== null ? (expert.updatedAt as Date).toISOString() : expert.updatedAt
   };

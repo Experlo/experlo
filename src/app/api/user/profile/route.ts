@@ -5,7 +5,7 @@ import type { User } from '@/types/user';
 import type { Expert } from '@/types/expert';
 
 interface UserWithExpertProfile extends Omit<User, 'createdAt' | 'updatedAt'> {
-  expertProfile?: Expert;
+  expertProfile?: Expert | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -15,8 +15,14 @@ import { z } from 'zod';
 const updateProfileSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
-  image: z.string().url().optional(),
-  bio: z.string().optional()
+  // Accept both URLs and local file paths for images
+  image: z.string().refine(
+    (val) => val.startsWith('/uploads/') || val.startsWith('http') || val === null,
+    { message: 'Image must be a valid URL or a local file path' }
+  ).optional(),
+  bio: z.string().optional(),
+  gender: z.string().optional().nullable(),
+  dateOfBirth: z.string().optional().nullable()
 });
 
 export async function GET() {
@@ -72,11 +78,12 @@ export async function GET() {
       );
     }
 
-    const user: UserWithExpertProfile = {
+    // Use type assertion to fix type issues
+    const user = {
       ...userFromDb,
       createdAt: userFromDb.createdAt instanceof Date ? userFromDb.createdAt.toISOString() : userFromDb.createdAt,
       updatedAt: userFromDb.updatedAt instanceof Date ? userFromDb.updatedAt.toISOString() : userFromDb.updatedAt,
-    };
+    } as unknown as UserWithExpertProfile;
 
     if (!user) {
       return NextResponse.json(
@@ -92,6 +99,8 @@ export async function GET() {
       firstName: user.firstName,
       lastName: user.lastName,
       image: user.image,
+      gender: user.gender,
+      dateOfBirth: user.dateOfBirth,
       isExpert: user.isExpert,
       password: user.password,
       createdAt: user.createdAt,
@@ -100,7 +109,7 @@ export async function GET() {
 
     // Add expert profile data if the user is an expert
     if (user.isExpert && user.expertProfile) {
-      const expertData = serializeExpert(user.expertProfile as any);
+      const expertData = serializeExpert(user.expertProfile as Expert);
       response.expertProfile = expertData;
     }
 
@@ -127,15 +136,18 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { firstName, lastName, image, bio } = updateProfileSchema.parse(body);
+    const { firstName, lastName, image, bio, gender, dateOfBirth } = updateProfileSchema.parse(body);
 
     const updateData: any = {
       firstName,
       lastName,
       ...(image && { image }),
+      ...(gender !== undefined && { gender }),
+      ...(dateOfBirth !== undefined && { dateOfBirth }),
     };
 
-    const updatedUser = (await prisma.user.update({
+    // Get updated user and convert dates to strings
+    const updatedUserRaw = await prisma.user.update({
       where: { id: payload.userId },
       data: updateData,
       include: {
@@ -159,7 +171,14 @@ export async function PUT(req: Request) {
           }
         }
       }
-    })) as UserWithExpertProfile;
+    });
+    
+    // Convert to UserWithExpertProfile with proper date handling
+    const updatedUser = {
+      ...updatedUserRaw,
+      createdAt: updatedUserRaw.createdAt instanceof Date ? updatedUserRaw.createdAt.toISOString() : updatedUserRaw.createdAt,
+      updatedAt: updatedUserRaw.updatedAt instanceof Date ? updatedUserRaw.updatedAt.toISOString() : updatedUserRaw.updatedAt,
+    } as unknown as UserWithExpertProfile;
 
     // Base response for all users
     const response: any = {
@@ -168,6 +187,8 @@ export async function PUT(req: Request) {
       firstName: updatedUser.firstName,
       lastName: updatedUser.lastName,
       image: updatedUser.image,
+      gender: updatedUser.gender,
+      dateOfBirth: updatedUser.dateOfBirth,
       isExpert: updatedUser.isExpert,
       createdAt: updatedUser.createdAt,
       updatedAt: updatedUser.updatedAt

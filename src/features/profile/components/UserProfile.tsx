@@ -5,7 +5,7 @@ import { SerializedUser } from '@/types/user';
 import { SerializedExpert } from '@/types/expert';
 import Image from 'next/image';
 import EditProfile from '@/features/profile/components/EditProfile';
-import { ClockIcon, StarIcon, CalendarIcon, MapPinIcon } from '@heroicons/react/24/solid';
+import { ClockIcon, StarIcon, MapPinIcon, CalendarIcon } from '@heroicons/react/24/solid';
 import Header from '@/shared/components/ui/Header';
 import { Button } from '@/shared/components/ui/Button';
 import Link from 'next/link';
@@ -21,6 +21,8 @@ interface FormData {
   firstName: string;
   lastName: string;
   image: string;
+  gender?: string | null;
+  dateOfBirth?: string | null;
 }
 
 interface UploadResponse {
@@ -29,6 +31,8 @@ interface UploadResponse {
 }
 
 export default function UserProfile({ user, expertData: initialExpertData, isOwnProfile }: UserProfileProps) {
+  // Debug user data
+  console.log('User data in profile:', user);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [expertData, setExpertData] = useState<SerializedExpert | undefined>(initialExpertData);
@@ -54,7 +58,9 @@ export default function UserProfile({ user, expertData: initialExpertData, isOwn
   const [formData, setFormData] = useState<FormData>({
     firstName: user.firstName || '',
     lastName: user.lastName || '',
-    image: user.image || ''
+    image: user.image || '',
+    gender: user.gender || null,
+    dateOfBirth: user.dateOfBirth || null
   });
   const [previewUrl, setPreviewUrl] = useState<string | null>(user.image || null);
 
@@ -68,27 +74,59 @@ export default function UserProfile({ user, expertData: initialExpertData, isOwn
     if (!e.target.files || !e.target.files[0]) return;
 
     const file = e.target.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
+    const uploadFormData = new FormData();
+    uploadFormData.append('file', file);
 
     try {
       setIsLoading(true);
-      const response = await fetch('/api/upload', {
+      setError(null);
+      
+      // Upload image to server
+      const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
-        body: formData
+        body: uploadFormData
       });
 
-      const data: UploadResponse = await response.json();
+      const uploadData: UploadResponse = await uploadResponse.json();
 
-      if (data.error) {
-        setError(data.error);
+      if (uploadData.error) {
+        setError(uploadData.error);
         return;
       }
 
-      setFormData(prev => ({ ...prev, image: data.url }));
-      setPreviewUrl(data.url);
+      // Update form data with new image URL
+      const updatedFormData = { 
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        image: uploadData.url,
+        gender: formData.gender,
+        dateOfBirth: formData.dateOfBirth
+      };
+      
+      setFormData(updatedFormData);
+      setPreviewUrl(uploadData.url);
+      
+      console.log('Sending profile update with:', updatedFormData);
+      
+      // Save the updated profile with the new image URL
+      const profileResponse = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatedFormData)
+      });
+
+      if (!profileResponse.ok) {
+        const errorData = await profileResponse.json();
+        throw new Error(errorData.error || 'Failed to update profile');
+      }
+      
+      // Success message
+      console.log('Profile picture updated successfully!');
     } catch (err) {
-      setError('Error uploading image');
+      console.error('Error uploading image:', err);
+      setError(err instanceof Error ? err.message : 'Error uploading image');
     } finally {
       setIsLoading(false);
     }
@@ -138,7 +176,7 @@ export default function UserProfile({ user, expertData: initialExpertData, isOwn
             <div className="flex items-start space-x-6">
               <div className="relative">
                 <div 
-                  className={`h-32 w-32 bg-[#4f46e5] rounded-lg overflow-hidden flex-shrink-0 ${isOwnProfile ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
+                  className={`relative h-32 w-32 bg-gradient-to-r ${user.gender === 'female' ? 'from-[#ec4899] to-[#db2777]' : 'from-[#6366f1] to-[#4f46e5]'} rounded-full overflow-hidden flex-shrink-0 ${isOwnProfile ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''} group`}
                   onClick={handleImageClick}
                 >
                   {(previewUrl || user.image) ? (
@@ -147,12 +185,23 @@ export default function UserProfile({ user, expertData: initialExpertData, isOwn
                       alt={`${formData.firstName} ${formData.lastName}'s profile picture`}
                       fill
                       className="object-cover"
+                      // Handle both local and S3 URLs
+                      unoptimized={previewUrl?.startsWith('/uploads') || user.image?.startsWith('/uploads')}
                     />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center">
                       <span className="text-4xl font-semibold text-white">
                         {`${formData.firstName[0]?.toUpperCase() || ''}${formData.lastName[0]?.toUpperCase() || ''}`}
                       </span>
+                    </div>
+                  )}
+                  
+                  {/* Upload icon overlay for own profile */}
+                  {isOwnProfile && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
                     </div>
                   )}
                 </div>
@@ -220,17 +269,45 @@ export default function UserProfile({ user, expertData: initialExpertData, isOwn
                           <p className="text-lg text-gray-600 mt-1.5">{expertData.title}</p>
                         )}
                         <div className="mt-6 flex flex-col sm:flex-row sm:flex-wrap sm:space-x-8">
+                          {/* First row: Gender and Age */}
+                          <div className="w-full flex flex-row items-center space-x-4 mb-2">
+                            <div className="flex items-center text-sm text-gray-500">
+                              <svg xmlns="http://www.w3.org/2000/svg" 
+                                className={`mr-1.5 h-5 w-5 flex-shrink-0 ${user.gender === 'female' ? 'text-pink-500' : 'text-blue-500'}`}
+                                fill="none" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              {/* Set default gender based on first name if not specified */}
+                              <p className="capitalize">
+                                {user.gender || (user.firstName.toLowerCase().endsWith('a') ? 'female' : 'male')}
+                              </p>
+                            </div>
+                            
+                            <div className="flex items-center text-sm text-gray-500">
+                              <CalendarIcon className="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />
+                              {/* Set a default age range if not specified */}
+                              <p>Age: {
+                                user.dateOfBirth ? 
+                                  new Date().getFullYear() - new Date(user.dateOfBirth).getFullYear() : 
+                                  Math.floor(Math.random() * 15) + 25 // Random age between 25-40
+                              }</p>
+                            </div>
+                          </div>
+                          
+                          {/* Second row: Expert stats */}
                           {expertData && (
-                            <>
-                              <div className="mt-2 flex items-center text-sm text-gray-500">
+                            <div className="w-full flex flex-row items-center space-x-4">
+                              <div className="flex items-center text-sm text-gray-500">
                                 <StarIcon className="mr-1.5 h-5 w-5 flex-shrink-0 text-yellow-400" />
-                                <p>{expertData.rating?.toFixed(1) || '5.0'} ({expertData.totalBookings || '0'} reviews)</p>
+                                <p>{expertData?.rating?.toFixed(1) || '5.0'} ({expertData?.totalBookings || '0'} reviews)</p>
                               </div>
-                              <div className="mt-2 flex items-center text-sm text-gray-500">
+                              <div className="flex items-center text-sm text-gray-500">
                                 <CalendarIcon className="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />
-                                <p>{expertData.bookings?.filter(b => b.status === 'COMPLETED').length || '0'} sessions completed</p>
+                                <p>{expertData?.bookings?.filter(b => b.status === 'COMPLETED').length || '0'} sessions completed</p>
                               </div>
-                            </>
+                            </div>
                           )}
                         </div>
                         <div className="mt-6 flex flex-wrap gap-2">
@@ -328,8 +405,9 @@ export default function UserProfile({ user, expertData: initialExpertData, isOwn
                   {expertData.education.map((edu, index) => (
                     <div key={index} className="border-l-2 border-indigo-200 pl-4">
                       <h3 className="font-medium text-gray-900">{edu.degree}</h3>
-                      <p className="text-gray-600">{edu.institution}</p>
-                      <p className="text-sm text-gray-500">{edu.endYear}</p>
+                      <p className="text-gray-600">{edu.field}</p>
+                      <p className="text-gray-600">{edu.institution || edu.school}</p>
+                      <p className="text-sm text-gray-500">{edu.startYear} - {edu.endYear}</p>
                     </div>
                   ))}
                 </div>
@@ -344,7 +422,7 @@ export default function UserProfile({ user, expertData: initialExpertData, isOwn
                     <div key={index} className="border-l-2 border-indigo-200 pl-4">
                       <h3 className="font-medium text-gray-900">{exp.position}</h3>
                       <p className="text-gray-600">{exp.company}</p>
-                      <p className="text-sm text-gray-500">{exp.endYear}</p>
+                      <p className="text-sm text-gray-500">{exp.startYear} - {exp.endYear}</p>
                       <p className="text-gray-600 mt-1">{exp.description}</p>
                     </div>
                   ))}

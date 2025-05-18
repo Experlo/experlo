@@ -4,6 +4,7 @@ import { type SerializedUser } from './user';
 export interface Education {
   id?: string;
   institution: string;
+  school?: string; // Add school field to handle database schema
   degree: string;
   field: string;
   startYear: number;

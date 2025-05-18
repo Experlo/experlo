@@ -9,6 +9,11 @@ export default function BecomeExpertPage() {
 
   const handleSave = async (formData: FormData) => {
     try {
+      // Validate form data before sending
+      if (!formData.title || !formData.bio || formData.categories.length === 0 || !formData.pricePerHour) {
+        throw new Error('Please fill in all required fields: Title, Bio, Categories, and Hourly Rate');
+      }
+
       const response = await fetch('/api/experts', {
         method: 'POST',
         headers: {
@@ -17,13 +22,24 @@ export default function BecomeExpertPage() {
         body: JSON.stringify(formData),
       });
 
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        data = { error: 'Received non-JSON response from server' };
+      }
+      
       if (!response.ok) {
-        throw new Error('Failed to create expert profile');
+        console.error('Server response:', data);
+        throw new Error(`Failed to create expert profile: ${data.error || response.statusText}`);
       }
 
+      // Success - redirect to dashboard
       router.push('/dashboard');
     } catch (error) {
       console.error('Error creating expert profile:', error);
+      alert(error instanceof Error ? error.message : 'An unknown error occurred');
     }
   };
 

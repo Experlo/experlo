@@ -6,6 +6,8 @@ export interface SerializedUser {
   firstName: string;
   lastName: string;
   image?: string | null;
+  gender?: string | null;
+  dateOfBirth?: string | null;
   isExpert: boolean;
   createdAt: string;
   updatedAt: string;
@@ -17,6 +19,8 @@ export interface User extends SerializedUser {
   firstName: string;
   lastName: string;
   image?: string | null;
+  gender?: string | null;
+  dateOfBirth?: string | null;
   password: string;
   isExpert: boolean;
   createdAt: string;

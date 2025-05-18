@@ -79,6 +79,8 @@ model User {
   lastName        String
   image           String?
   password        String
+  gender          String?        // Can be "male" or "female"
+  dateOfBirth     DateTime?      // User's date of birth
   isExpert        Boolean        @default(false)
   expertProfile   ExpertProfile?
   bookings        Booking[]      @relation("UserBookings")

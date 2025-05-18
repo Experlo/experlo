@@ -2,60 +2,6 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/auth/jwt';
 
-export async function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
-  console.log('Middleware - Path:', pathname);
-  
-  // Skip middleware for public assets and API routes
-  if (pathname.startsWith('/_next') || pathname.startsWith('/api')) {
-    return NextResponse.next();
-  }
-
-  // Check if the current route requires authentication
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
-  // Check if the current route is an auth route
-  const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
-  
-  const authToken = request.cookies.get('auth_token');
-  console.log('Middleware - Auth token exists:', !!authToken);
-  
-  // Use the previously defined isAuthRoute
-  console.log('Middleware - Is auth route:', isAuthRoute);
-  
-  let isAuthenticated = false;
-  let payload = null;
-  
-  if (authToken?.value) {
-    try {
-      payload = await verifyToken(authToken.value);
-      isAuthenticated = !!payload;
-      console.log('Middleware - Token payload:', payload);
-    } catch (error: any) {
-      console.error('Middleware - Invalid token:', error?.message || 'Unknown error');
-      // Clear invalid token
-      const response = NextResponse.redirect(new URL('/auth/login', request.url));
-      response.cookies.delete('auth_token');
-      return response;
-    }
-  }
-  
-  console.log('Middleware - Auth status:', { isAuthenticated, isAuthRoute });
-
-  const baseUrl = request.nextUrl.origin;
-
-  if (!isAuthenticated && isProtectedRoute) {
-    const url = new URL('/auth/login', baseUrl);
-    url.searchParams.set('callbackUrl', request.nextUrl.pathname);
-    return NextResponse.redirect(url);
-  }
-
-  if (isAuthenticated && isAuthRoute) {
-    return NextResponse.redirect(new URL('/dashboard', baseUrl));
-  }
-
-  return NextResponse.next();
-}
-
 // Define protected routes that require authentication
 const protectedRoutes = [
   '/dashboard',
@@ -69,6 +15,53 @@ const authRoutes = [
   '/auth/login',
   '/auth/register'
 ];
+
+export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  
+  // Skip middleware for public assets and API routes
+  if (pathname.startsWith('/_next') || 
+      pathname.startsWith('/api') || 
+      pathname === '/') {
+    return NextResponse.next();
+  }
+
+  // Check if the current route requires authentication
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+  // Check if the current route is an auth route
+  const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
+  
+  const authToken = request.cookies.get('auth_token');
+  
+  let isAuthenticated = false;
+  
+  if (authToken?.value) {
+    try {
+      const payload = await verifyToken(authToken.value);
+      isAuthenticated = !!payload;
+    } catch (error) {
+      // Invalid token - treat as not authenticated
+      isAuthenticated = false;
+    }
+  }
+
+  const baseUrl = request.nextUrl.origin;
+
+  // Redirect unauthenticated users from protected routes to login
+  if (!isAuthenticated && isProtectedRoute) {
+    const url = new URL('/auth/login', baseUrl);
+    url.searchParams.set('callbackUrl', encodeURIComponent(request.nextUrl.pathname));
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect authenticated users from auth routes to dashboard
+  if (isAuthenticated && isAuthRoute) {
+    return NextResponse.redirect(new URL('/dashboard', baseUrl));
+  }
+
+  // Allow access to all other routes
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [

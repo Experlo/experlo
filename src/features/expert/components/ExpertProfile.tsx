@@ -10,8 +10,19 @@ interface ExpertProfileProps {
 }
 
 export default function ExpertProfile({ expert }: ExpertProfileProps) {
+  // Debug expert data
+  console.log('Expert data in profile:', expert);
+  console.log('User data in expert profile:', expert.user);
+  console.log('Raw gender value:', expert.user.gender);
+  
+  // Normalize gender before destructuring
+  if (expert.user.gender) {
+    expert.user.gender = expert.user.gender.toLowerCase().trim();
+    console.log('Normalized gender before destructuring:', expert.user.gender);
+  }
+  
   const {
-    user: { firstName, lastName, image },
+    user: { firstName, lastName, image, gender, dateOfBirth },
     title,
     bio,
     categories,
@@ -23,6 +34,16 @@ export default function ExpertProfile({ expert }: ExpertProfileProps) {
     rating = 5,
     bookings = [],
   } = expert;
+  
+  // Force gender to be a specific value for debugging
+  const effectiveGender = gender?.toLowerCase().trim() || null;
+  console.log('Effective gender value:', effectiveGender);
+  
+  // Debug gender and dateOfBirth after destructuring
+  console.log('Gender after destructuring:', gender, typeof gender);
+  console.log('Is gender null or undefined?', gender === null || gender === undefined);
+  console.log('Is gender empty string?', gender === '');
+  console.log('Date of Birth:', dateOfBirth, typeof dateOfBirth);
 
   return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -38,16 +59,18 @@ export default function ExpertProfile({ expert }: ExpertProfileProps) {
                 </div>
                 <div className="p-8">
                   <div className="flex items-start space-x-6">
-                    <div className="relative h-40 w-40 rounded-2xl overflow-hidden shadow-lg flex-shrink-0">
+                    <div className="relative h-40 w-40 rounded-full overflow-hidden shadow-lg flex-shrink-0">
                       {image ? (
                         <Image
                           src={image}
                           alt={`${firstName} ${lastName}`}
                           fill
                           className="object-cover"
+                          // Handle both local and S3 URLs
+                          unoptimized={image.startsWith('/uploads')}
                         />
                       ) : (
-                        <div className="h-full w-full bg-gradient-to-br from-[#6366f1] to-[#4f46e5] flex items-center justify-center">
+                        <div className={`h-full w-full rounded-full bg-gradient-to-br ${effectiveGender === 'female' ? 'from-[#ec4899] to-[#db2777]' : 'from-[#6366f1] to-[#4f46e5]'} flex items-center justify-center`}>
                           <span className="text-3xl font-semibold text-white">
                             {`${firstName[0]}${lastName[0]}`}
                           </span>
@@ -59,6 +82,32 @@ export default function ExpertProfile({ expert }: ExpertProfileProps) {
                         <div>
                           <h1 className="text-3xl font-bold text-gray-900 mb-2">{`${firstName} ${lastName}`}</h1>
                           <p className="text-xl text-gray-600 mb-4">{title}</p>
+                          {/* Gender and Age Row */}
+                          <div className="flex items-center space-x-4 text-sm mb-2">
+                            <div className="flex items-center text-gray-600">
+                              <svg xmlns="http://www.w3.org/2000/svg" 
+                                className={`mr-1.5 h-5 w-5 flex-shrink-0 ${effectiveGender === 'female' ? 'text-pink-500' : 'text-blue-500'}`} 
+                                fill="none" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              <span className="capitalize">
+                                {effectiveGender || 'Not specified'}
+                              </span>
+                            </div>
+                            <div className="flex items-center text-gray-600">
+                              <CalendarIcon className="h-5 w-5 mr-1.5" />
+                              {/* Only show age if dateOfBirth is specified */}
+                              <span>
+                                {dateOfBirth ? 
+                                  `Age: ${new Date().getFullYear() - new Date(dateOfBirth).getFullYear()}` : 
+                                  'Age: Not specified'}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Reviews and Sessions Row */}
                           <div className="flex items-center space-x-4 text-sm">
                             <div className="flex items-center text-yellow-500">
                               <StarIcon className="h-5 w-5" />

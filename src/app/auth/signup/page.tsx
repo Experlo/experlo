@@ -22,6 +22,8 @@ export default function SignupPage() {
         lastName: formData.get('lastName') as string,
         email: formData.get('email') as string,
         password: formData.get('password') as string,
+        gender: formData.get('gender') as string,
+        dateOfBirth: formData.get('dateOfBirth') as string,
       };
 
       const response = await fetch('/api/auth/register', {
@@ -150,6 +152,69 @@ export default function SignupPage() {
                   className="block w-full px-4 py-3 rounded-xl border-gray-300 bg-white text-gray-900 shadow-sm focus:ring-[#5D5FEF] focus:border-[#5D5FEF] text-base"
                 />
               </div>
+
+              <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                <h3 className="text-md font-medium text-gray-800 mb-3">Personal Information</h3>
+                
+                <div className="mb-4">
+                  <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <input
+                      id="dateOfBirth"
+                      name="dateOfBirth"
+                      type="date"
+                      required
+                      className="block w-full pl-10 px-4 py-3 rounded-xl border-gray-300 bg-white text-gray-900 shadow-sm focus:ring-[#5D5FEF] focus:border-[#5D5FEF] text-base"
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">We use this to personalize your experience</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="relative flex items-center justify-center p-4 cursor-pointer rounded-xl border border-gray-200 hover:border-[#5D5FEF] transition-colors">
+                      <input
+                        id="gender-male"
+                        name="gender"
+                        type="radio"
+                        value="male"
+                        required
+                        className="h-4 w-4 absolute top-2 right-2 text-[#5D5FEF] focus:ring-[#5D5FEF] border-gray-300"
+                      />
+                      <div className="flex flex-col items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span className="mt-2 font-medium text-gray-900">Male</span>
+                      </div>
+                    </label>
+                    
+                    <label className="relative flex items-center justify-center p-4 cursor-pointer rounded-xl border border-gray-200 hover:border-[#5D5FEF] transition-colors">
+                      <input
+                        id="gender-female"
+                        name="gender"
+                        type="radio"
+                        value="female"
+                        className="h-4 w-4 absolute top-2 right-2 text-[#5D5FEF] focus:ring-[#5D5FEF] border-gray-300"
+                      />
+                      <div className="flex flex-col items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span className="mt-2 font-medium text-gray-900">Female</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              {/* We'll use React state instead of script tags */}
 
               <div>
                 <Button
