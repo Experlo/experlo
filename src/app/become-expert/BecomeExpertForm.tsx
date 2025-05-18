@@ -1,36 +1,32 @@
 'use client';
 
 import React, { useState, FormEvent, ChangeEvent, KeyboardEvent } from 'react';
-import { XCircleIcon, PlusIcon } from '@heroicons/react/24/outline';
-import { Education, Experience, Certification } from '@/types/expert';
+import { Education, Experience } from '@/types/expert';
 import { Label } from '@/shared/components/ui/Label';
 import { Input } from '@/shared/components/ui/Input';
 import { Button } from '@/shared/components/ui/Button';
 import { Textarea } from '@/shared/components/ui/Textarea';
+import { XCircleIcon, PlusIcon } from '@heroicons/react/24/outline';
 import styles from './BecomeExpertForm.module.css';
 
-interface CertificationForm extends Omit<Certification, 'createdAt' | 'updatedAt'> {
+interface Certification {
   id: string;
   name: string;
   issuer: string;
-  year: number;
   expertId: string;
   issuingOrganization: string;
   issueDate: string;
 }
 
 export interface FormData {
-  firstName: string;
-  lastName: string;
-  email: string;
   image: string;
-  title?: string;
-  bio?: string;
+  title: string;
+  bio: string;
   categories: string[];
   pricePerHour: number;
   education: Education[];
   experience: Experience[];
-  certifications: CertificationForm[];
+  certifications: Certification[];
 }
 
 interface BecomeExpertFormProps {
@@ -41,9 +37,6 @@ interface BecomeExpertFormProps {
 
 export default function BecomeExpertForm({ onSave, onCancel, isLoading = false }: BecomeExpertFormProps): React.ReactElement {
   const [formData, setFormData] = useState<FormData>({
-    firstName: '',
-    lastName: '',
-    email: '',
     image: '',
     title: '',
     bio: '',
@@ -71,17 +64,21 @@ export default function BecomeExpertForm({ onSave, onCancel, isLoading = false }
     ...formData
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCategoryKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleCategoryKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const value = (e.target as HTMLInputElement).value;
-      addCategory(value);
-      (e.target as HTMLInputElement).value = '';
+      const value = e.currentTarget.value.trim();
+      if (value && !formData.categories.includes(value)) {
+        setFormData(prev => ({ ...prev, categories: [...prev.categories, value] }));
+        e.currentTarget.value = '';
+      }
+    } else if (e.key === 'Backspace' && e.currentTarget.value === '' && formData.categories.length > 0) {
+      setFormData(prev => ({ ...prev, categories: prev.categories.slice(0, -1) }));
     }
   };
 
@@ -96,10 +93,7 @@ export default function BecomeExpertForm({ onSave, onCancel, isLoading = false }
   };
 
   const removeCategory = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      categories: prev.categories.filter((_, i) => i !== index)
-    }));
+    setFormData(prev => ({ ...prev, categories: prev.categories.filter((_, i) => i !== index) }));
   };
 
   const toggleExpanded = (type: 'education' | 'experience' | 'certifications', index: number) => {
@@ -113,181 +107,106 @@ export default function BecomeExpertForm({ onSave, onCancel, isLoading = false }
   };
 
   const startEditing = (type: 'education' | 'experience' | 'certifications', index: number) => {
-    setEditingItems(prev => ({
-      ...prev,
-      [type]: [...prev[type], index]
-    }));
-    setExpandedItems(prev => ({
-      ...prev,
-      [type]: [...prev[type], index]
-    }));
-    setTempFormData(prev => ({
-      ...prev,
-      [type]: [...formData[type]]
-    }));
+    setEditingItems(prev => ({ ...prev, [type]: [...prev[type], index] }));
+    setExpandedItems(prev => ({ ...prev, [type]: [...prev[type], index] }));
+    setTempFormData(prev => ({ ...prev, [type]: [...formData[type]] }));
   };
 
   const cancelEditing = (type: 'education' | 'experience' | 'certifications', index: number) => {
-    setEditingItems(prev => ({
-      ...prev,
-      [type]: prev[type].filter(i => i !== index)
-    }));
-    setExpandedItems(prev => ({
-      ...prev,
-      [type]: prev[type].filter(i => i !== index)
-    }));
-    setTempFormData(prev => ({
-      ...prev,
-      [type]: [...formData[type]]
-    }));
+    setEditingItems(prev => ({ ...prev, [type]: prev[type].filter(i => i !== index) }));
+    setExpandedItems(prev => ({ ...prev, [type]: prev[type].filter(i => i !== index) }));
+    setTempFormData(prev => ({ ...prev, [type]: [...formData[type]] }));
   };
 
   const saveEditing = (type: 'education' | 'experience' | 'certifications', index: number) => {
     setFormData(prev => ({
       ...prev,
-      [type]: prev[type].map((item, i) =>
-        i === index ? tempFormData[type][i] : item
-      )
+      [type]: prev[type].map((item, i) => i === index ? tempFormData[type][i] : item)
     }));
-    setEditingItems(prev => ({
-      ...prev,
-      [type]: prev[type].filter(i => i !== index)
-    }));
-    setExpandedItems(prev => ({
-      ...prev,
-      [type]: prev[type].filter(i => i !== index)
-    }));
+    setEditingItems(prev => ({ ...prev, [type]: prev[type].filter(i => i !== index) }));
+    setExpandedItems(prev => ({ ...prev, [type]: prev[type].filter(i => i !== index) }));
   };
 
   const handleEducationFieldChange = (index: number, field: keyof Education, value: string | number) => {
     setTempFormData(prev => ({
       ...prev,
-      education: prev.education.map((edu, i) => {
-        if (i === index) {
-          return { ...edu, [field]: value };
-        }
-        return edu;
-      })
+      education: prev.education.map((edu, i) => (i === index ? { ...edu, [field]: value } : edu))
     }));
   };
 
   const addEducation = () => {
-    const newEducation = { institution: '', degree: '', field: '', startYear: 0, endYear: 0 };
+    const newEducation = { institution: '', degree: '', field: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear() };
     const newIndex = formData.education.length;
     
-    setFormData(prev => ({
-      ...prev,
-      education: [...prev.education, newEducation]
-    }));
-    setTempFormData(prev => ({
-      ...prev,
-      education: [...prev.education, newEducation]
-    }));
+    setFormData(prev => ({ ...prev, education: [...prev.education, newEducation] }));
+    setTempFormData(prev => ({ ...prev, education: [...prev.education, newEducation] }));
     
-    setEditingItems(prev => ({
-      ...prev,
-      education: [...prev.education, newIndex]
-    }));
+    // Automatically expand and start editing new item
+    setExpandedItems(prev => ({ ...prev, education: [...prev.education, newIndex] }));
+    setEditingItems(prev => ({ ...prev, education: [...prev.education, newIndex] }));
   };
 
   const removeEducation = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      education: prev.education.filter((_, i) => i !== index)
-    }));
-    setTempFormData(prev => ({
-      ...prev,
-      education: prev.education.filter((_, i) => i !== index)
-    }));
+    setFormData(prev => ({ ...prev, education: prev.education.filter((_, i) => i !== index) }));
   };
 
   const handleExperienceFieldChange = (index: number, field: keyof Experience, value: string | number) => {
     setTempFormData(prev => ({
       ...prev,
-      experience: prev.experience.map((exp, i) => {
-        if (i === index) {
-          return { ...exp, [field]: value };
-        }
-        return exp;
-      })
+      experience: prev.experience.map((exp, i) => (i === index ? { ...exp, [field]: value } : exp))
     }));
   };
 
   const addExperience = () => {
-    const newExperience = { company: '', position: '', description: '', startYear: 0, endYear: 0 };
+    const newExperience = { company: '', position: '', description: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear() };
     const newIndex = formData.experience.length;
     
-    setFormData(prev => ({
-      ...prev,
-      experience: [...prev.experience, newExperience]
-    }));
-    setTempFormData(prev => ({
-      ...prev,
-      experience: [...prev.experience, newExperience]
-    }));
+    setFormData(prev => ({ ...prev, experience: [...prev.experience, newExperience] }));
+    setTempFormData(prev => ({ ...prev, experience: [...prev.experience, newExperience] }));
     
-    setEditingItems(prev => ({
-      ...prev,
-      experience: [...prev.experience, newIndex]
-    }));
+    // Automatically expand and start editing new item
+    setExpandedItems(prev => ({ ...prev, experience: [...prev.experience, newIndex] }));
+    setEditingItems(prev => ({ ...prev, experience: [...prev.experience, newIndex] }));
   };
 
   const removeExperience = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      experience: prev.experience.filter((_, i) => i !== index)
-    }));
-    setTempFormData(prev => ({
-      ...prev,
-      experience: prev.experience.filter((_, i) => i !== index)
-    }));
+    setFormData(prev => ({ ...prev, experience: prev.experience.filter((_, i) => i !== index) }));
   };
 
-  const handleCertificationFieldChange = (index: number, field: keyof CertificationForm, value: string | number) => {
+  const handleCertificationFieldChange = (index: number, field: keyof Certification, value: string | number) => {
     setTempFormData(prev => ({
       ...prev,
-      certifications: prev.certifications.map((cert, i) => {
-        if (i === index) {
-          return { ...cert, [field]: value };
-        }
-        return cert;
-      })
+      certifications: prev.certifications.map((cert, i) => (i === index ? { ...cert, [field]: value } : cert))
     }));
   };
 
   const addCertification = () => {
-    const newCertification = { id: '', name: '', issuer: '', year: 0, expertId: '', issuingOrganization: '', issueDate: '' };
+    const newCertification: Certification = {
+      id: '',
+      name: '',
+      issuer: '',
+      expertId: '',
+      issuingOrganization: '',
+      issueDate: new Date().toISOString().split('T')[0]
+    };
     const newIndex = formData.certifications.length;
     
-    setFormData(prev => ({
-      ...prev,
-      certifications: [...prev.certifications, newCertification]
-    }));
-    setTempFormData(prev => ({
-      ...prev,
-      certifications: [...prev.certifications, newCertification]
-    }));
+    setFormData(prev => ({ ...prev, certifications: [...prev.certifications, newCertification] }));
+    setTempFormData(prev => ({ ...prev, certifications: [...prev.certifications, newCertification] }));
     
-    setEditingItems(prev => ({
-      ...prev,
-      certifications: [...prev.certifications, newIndex]
-    }));
-    startEditing('certifications', newIndex);
+    // Automatically expand and start editing new item
+    setExpandedItems(prev => ({ ...prev, certifications: [...prev.certifications, newIndex] }));
+    setEditingItems(prev => ({ ...prev, certifications: [...prev.certifications, newIndex] }));
   };
 
   const removeCertification = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      certifications: prev.certifications.filter((_, i) => i !== index)
-    }));
-    setTempFormData(prev => ({
-      ...prev,
-      certifications: prev.certifications.filter((_, i) => i !== index)
-    }));
+    setFormData(prev => ({ ...prev, certifications: prev.certifications.filter((_, i) => i !== index) }));
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setError('');
+    
     try {
       await onSave(formData);
     } catch (err) {
@@ -296,391 +215,641 @@ export default function BecomeExpertForm({ onSave, onCancel, isLoading = false }
   };
 
   return (
-    <form onSubmit={handleSubmit} className={styles.form}>
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="firstName">First Name</Label>
-            <Input
-              id="firstName"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="lastName">Last Name</Label>
-            <Input
-              id="lastName"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="title">Professional Title</Label>
-          <Input
-            id="title"
-            name="title"
-            value={formData.title}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="bio">Bio</Label>
-          <Textarea
-            id="bio"
-            name="bio"
-            value={formData.bio}
-            onChange={handleInputChange}
-            required
-            rows={4}
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="categories">Areas of Expertise</Label>
-          <div className={styles.tagsContainer}>
-            {formData.categories.map((category, index) => (
-              <div key={index} className={styles.tag}>
-                <span className={styles.tagText}>{category}</span>
-                <XCircleIcon
-                  className={styles.tagDelete}
-                  onClick={() => removeCategory(index)}
-                />
-              </div>
-            ))}
-          </div>
-          <Input
-            id="categories"
-            placeholder="Type and press Enter to add"
-            onKeyDown={handleCategoryKeyDown}
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="pricePerHour">Hourly Rate (USD)</Label>
-          <Input
-            id="pricePerHour"
-            name="pricePerHour"
-            type="number"
-            value={formData.pricePerHour}
-            onChange={handleInputChange}
-            required
-            min={0}
-          />
-        </div>
-
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <Label>Education</Label>
-            <Button
-              type="button"
-              onClick={addEducation}
-              className={styles.actionButton}
-            >
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Add Education
-            </Button>
-          </div>
-          {formData.education.map((edu, index) => (
-            <div key={index} className="mb-4 p-4 border rounded-lg">
-              <div className="grid grid-cols-1 gap-4">
-                <Input
-                  placeholder="Institution"
-                  value={tempFormData.education[index]?.institution || ''}
-                  onChange={(e) => handleEducationFieldChange(index, 'institution', e.target.value)}
-                  disabled={!editingItems.education.includes(index)}
-                />
-                <Input
-                  placeholder="Degree"
-                  value={tempFormData.education[index]?.degree || ''}
-                  onChange={(e) => handleEducationFieldChange(index, 'degree', e.target.value)}
-                  disabled={!editingItems.education.includes(index)}
-                />
-                <Input
-                  placeholder="Field of Study"
-                  value={tempFormData.education[index]?.field || ''}
-                  onChange={(e) => handleEducationFieldChange(index, 'field', e.target.value)}
-                  disabled={!editingItems.education.includes(index)}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <Input
-                    type="number"
-                    placeholder="Start Year"
-                    value={tempFormData.education[index]?.startYear || ''}
-                    onChange={(e) => handleEducationFieldChange(index, 'startYear', parseInt(e.target.value))}
-                    disabled={!editingItems.education.includes(index)}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="End Year"
-                    value={tempFormData.education[index]?.endYear || ''}
-                    onChange={(e) => handleEducationFieldChange(index, 'endYear', parseInt(e.target.value))}
-                    disabled={!editingItems.education.includes(index)}
-                  />
-                </div>
-              </div>
-              <div className="mt-4 flex justify-end space-x-2">
-                {editingItems.education.includes(index) ? (
-                  <>
-                    <Button
+    <div className={styles.backdrop}> 
+      <div className={styles.formContainer}>
+        <form onSubmit={handleSubmit} className={styles.form}>
+          {error && (
+            <div className={styles.error}>
+              <XCircleIcon className="h-5 w-5" />
+              <span>{error}</span>
+            </div>
+          )}
+          
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>Become an Expert</h2>
+            <p className={styles.sectionSubtitle}>Complete your expert profile to start offering your expertise on our platform.</p>
+  
+            <div className={styles.fieldGroup}>
+              <Label htmlFor="title">Professional Title</Label>
+              <Input
+                id="title"
+                name="title"
+                type="text"
+                placeholder="e.g., Senior Software Engineer, Business Consultant"
+                value={formData.title}
+                onChange={handleInputChange}
+                required
+                className={styles.input}
+              />
+            </div>
+            
+            <div className={styles.fieldGroup}>
+              <Label htmlFor="bio">Professional Bio</Label>
+              <Textarea
+                id="bio"
+                name="bio"
+                placeholder="Tell us about your professional background, expertise, and what makes you unique..."
+                value={formData.bio}
+                onChange={handleInputChange}
+                required
+                className={styles.textarea}
+                rows={4}
+              />
+            </div>
+            
+            <div className={styles.fieldGroup}>
+              <Label htmlFor="categories">Areas of Expertise</Label>
+              <div className={styles.tagsContainer}>
+                {formData.categories.map((category, index) => (
+                  <div className={styles.tag} key={index}>
+                    <span className={styles.tagText}>{category}</span>
+                    <button
                       type="button"
-                      onClick={() => saveEditing('education', index)}
-                      className={`${styles.actionButton}`}
+                      onClick={() => removeCategory(index)}
+                      className="ml-1"
                     >
-                      Save
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => cancelEditing('education', index)}
-                      className={`${styles.actionButton} ${styles.cancelButton}`}
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      type="button"
-                      onClick={() => startEditing('education', index)}
-                      className={styles.actionButton}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => removeEducation(index)}
-                      className={`${styles.actionButton} ${styles.cancelButton}`}
-                    >
-                      Remove
-                    </Button>
-                  </>
-                )}
+                      <XCircleIcon className={styles.tagDelete} />
+                    </button>
+                  </div>
+                ))}
+                <input
+                  type="text"
+                  id="categories"
+                  className={styles.tagInput}
+                  placeholder={formData.categories.length === 0 ? "e.g., Business Strategy, Technology Consulting (press Enter)" : ""}
+                  onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const value = e.currentTarget.value.trim();
+                      if (value) {
+                        addCategory(value);
+                        e.currentTarget.value = '';
+                      }
+                    } else if (e.key === 'Backspace' && e.currentTarget.value === '' && formData.categories.length > 0) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        categories: prev.categories.slice(0, -1)
+                      }));
+                    }
+                  }}
+                />
               </div>
             </div>
-          ))}
-        </div>
-
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <Label>Experience</Label>
+            
+            <div className={styles.fieldGroup}>
+              <Label htmlFor="pricePerHour">Hourly Rate (USD)</Label>
+              <div className="relative">
+                <Input
+                  id="pricePerHour"
+                  name="pricePerHour"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formData.pricePerHour}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      setFormData(prev => ({ ...prev, pricePerHour: 0 }));
+                      return;
+                    }
+                    const numValue = parseFloat(value);
+                    if (!isNaN(numValue) && numValue >= 0) {
+                      setFormData(prev => ({ ...prev, pricePerHour: numValue }));
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const value = parseFloat(e.target.value);
+                    if (!isNaN(value) && value >= 0) {
+                      setFormData(prev => ({ ...prev, pricePerHour: Math.round(value * 100) / 100 }));
+                    }
+                  }}
+                  required
+                  className={styles.input}
+                />
+              </div>
+              <p className="text-sm text-gray-500 mt-1">This will be your standard rate for consulting sessions.</p>
+            </div>
+          </div>
+  
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>Education</h2>
+            <p className={styles.sectionSubtitle}>Add your educational background and qualifications.</p>
+            
+            <div className="flex justify-between items-center mb-4">
+              <div></div>
+              <button
+                type="button"
+                className={styles.addButton}
+                onClick={addEducation}
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                Add Education
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {formData.education.map((edu, index) => {
+                const isExpanded = expandedItems.education.includes(index);
+                const isEditing = editingItems.education.includes(index);
+                
+                return (
+                  <div 
+                    key={index} 
+                    className={`${styles.itemCard} ${!isExpanded && !isEditing ? styles.itemCardCollapsed : ''}`}
+                    onClick={() => !isEditing && toggleExpanded('education', index)}
+                  >
+                    <div className={styles.itemHeader}>
+                      <h3 className={styles.itemTitle}>
+                        {edu.institution || 'New Education'}
+                        {edu.degree && ` - ${edu.degree}`}
+                      </h3>
+                      <div className={styles.itemActions}>
+                        {!isExpanded && !isEditing && (
+                          <button
+                            type="button"
+                            className={styles.actionButton}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpanded('education', index);
+                            }}
+                          >
+                            View
+                          </button>
+                        )}
+                        {isExpanded && !isEditing && (
+                          <>
+                            <button
+                              type="button"
+                              className={`${styles.actionButton} ${styles.editButton}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                startEditing('education', index);
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className={`${styles.actionButton} ${styles.cancelButton}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeEducation(index);
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {(isExpanded || isEditing) && (
+                      <div className="mt-4 space-y-4">
+                        {isEditing ? (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor={`education-${index}-institution`}>Institution</Label>
+                                <Input
+                                  id={`education-${index}-institution`}
+                                  value={tempFormData.education[index]?.institution || ''}
+                                  onChange={(e) => handleEducationFieldChange(index, 'institution', e.target.value)}
+                                  required
+                                  className={styles.input}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`education-${index}-degree`}>Degree</Label>
+                                <Input
+                                  id={`education-${index}-degree`}
+                                  value={tempFormData.education[index]?.degree || ''}
+                                  onChange={(e) => handleEducationFieldChange(index, 'degree', e.target.value)}
+                                  required
+                                  className={styles.input}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <Label htmlFor={`education-${index}-field`}>Field of Study</Label>
+                              <Input
+                                id={`education-${index}-field`}
+                                value={tempFormData.education[index]?.field || ''}
+                                onChange={(e) => handleEducationFieldChange(index, 'field', e.target.value)}
+                                required
+                                className={styles.input}
+                              />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor={`education-${index}-startYear`}>Start Year</Label>
+                                <Input
+                                  id={`education-${index}-startYear`}
+                                  type="number"
+                                  min="1900"
+                                  max={new Date().getFullYear()}
+                                  value={tempFormData.education[index]?.startYear || ''}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value);
+                                    if (!isNaN(value)) {
+                                      handleEducationFieldChange(index, 'startYear', value);
+                                    }
+                                  }}
+                                  required
+                                  className={styles.input}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`education-${index}-endYear`}>End Year</Label>
+                                <Input
+                                  id={`education-${index}-endYear`}
+                                  type="number"
+                                  min="1900"
+                                  max={new Date().getFullYear() + 10}
+                                  value={tempFormData.education[index]?.endYear || ''}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value);
+                                    if (!isNaN(value)) {
+                                      handleEducationFieldChange(index, 'endYear', value);
+                                    }
+                                  }}
+                                  required
+                                  className={styles.input}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex justify-end space-x-2 mt-4">
+                              <button
+                                type="button"
+                                className={`${styles.actionButton} ${styles.cancelButton}`}
+                                onClick={() => cancelEditing('education', index)}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                className={`${styles.actionButton} ${styles.saveButton}`}
+                                onClick={() => saveEditing('education', index)}
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="space-y-2">
+                            <p><strong>Institution:</strong> {edu.institution}</p>
+                            <p><strong>Degree:</strong> {edu.degree}</p>
+                            <p><strong>Field of Study:</strong> {edu.field}</p>
+                            <p><strong>Years:</strong> {edu.startYear} - {edu.endYear}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+  
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>Experience</h2>
+            <p className={styles.sectionSubtitle}>Add your work experience.</p>
+            
+            <div className="flex justify-between items-center mb-4">
+              <div></div>
+              <button
+                type="button"
+                className={styles.addButton}
+                onClick={addExperience}
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                Add Experience
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {formData.experience.map((exp, index) => {
+                const isExpanded = expandedItems.experience.includes(index);
+                const isEditing = editingItems.experience.includes(index);
+                
+                return (
+                  <div 
+                    key={index} 
+                    className={`${styles.itemCard} ${!isExpanded && !isEditing ? styles.itemCardCollapsed : ''}`}
+                    onClick={() => !isEditing && toggleExpanded('experience', index)}
+                  >
+                    <div className={styles.itemHeader}>
+                      <h3 className={styles.itemTitle}>
+                        {exp.company || 'New Experience'}
+                        {exp.position && ` - ${exp.position}`}
+                      </h3>
+                      <div className={styles.itemActions}>
+                        {!isExpanded && !isEditing && (
+                          <button
+                            type="button"
+                            className={styles.actionButton}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpanded('experience', index);
+                            }}
+                          >
+                            View
+                          </button>
+                        )}
+                        {isExpanded && !isEditing && (
+                          <>
+                            <button
+                              type="button"
+                              className={`${styles.actionButton} ${styles.editButton}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                startEditing('experience', index);
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className={`${styles.actionButton} ${styles.cancelButton}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeExperience(index);
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {(isExpanded || isEditing) && (
+                      <div className="mt-4 space-y-4">
+                        {isEditing ? (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor={`experience-${index}-company`}>Company</Label>
+                                <Input
+                                  id={`experience-${index}-company`}
+                                  value={tempFormData.experience[index]?.company || ''}
+                                  onChange={(e) => handleExperienceFieldChange(index, 'company', e.target.value)}
+                                  required
+                                  className={styles.input}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`experience-${index}-position`}>Position</Label>
+                                <Input
+                                  id={`experience-${index}-position`}
+                                  value={tempFormData.experience[index]?.position || ''}
+                                  onChange={(e) => handleExperienceFieldChange(index, 'position', e.target.value)}
+                                  required
+                                  className={styles.input}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <Label htmlFor={`experience-${index}-description`}>Description</Label>
+                              <Textarea
+                                id={`experience-${index}-description`}
+                                value={tempFormData.experience[index]?.description || ''}
+                                onChange={(e) => handleExperienceFieldChange(index, 'description', e.target.value)}
+                                required
+                                className={styles.textarea}
+                                rows={3}
+                              />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor={`experience-${index}-startYear`}>Start Year</Label>
+                                <Input
+                                  id={`experience-${index}-startYear`}
+                                  type="number"
+                                  min="1900"
+                                  max={new Date().getFullYear()}
+                                  value={tempFormData.experience[index]?.startYear || ''}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value);
+                                    if (!isNaN(value)) {
+                                      handleExperienceFieldChange(index, 'startYear', value);
+                                    }
+                                  }}
+                                  required
+                                  className={styles.input}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`experience-${index}-endYear`}>End Year</Label>
+                                <Input
+                                  id={`experience-${index}-endYear`}
+                                  type="number"
+                                  min="1900"
+                                  max={new Date().getFullYear() + 10}
+                                  value={tempFormData.experience[index]?.endYear || ''}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value);
+                                    if (!isNaN(value)) {
+                                      handleExperienceFieldChange(index, 'endYear', value);
+                                    }
+                                  }}
+                                  required
+                                  className={styles.input}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex justify-end space-x-2 mt-4">
+                              <button
+                                type="button"
+                                className={`${styles.actionButton} ${styles.cancelButton}`}
+                                onClick={() => cancelEditing('experience', index)}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                className={`${styles.actionButton} ${styles.saveButton}`}
+                                onClick={() => saveEditing('experience', index)}
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="space-y-2">
+                            <p><strong>Company:</strong> {exp.company}</p>
+                            <p><strong>Position:</strong> {exp.position}</p>
+                            <p><strong>Description:</strong> {exp.description}</p>
+                            <p><strong>Years:</strong> {exp.startYear} - {exp.endYear}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+  
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>Certifications</h2>
+            <p className={styles.sectionSubtitle}>Add any relevant certifications.</p>
+            
+            <div className="flex justify-between items-center mb-4">
+              <div></div>
+              <button
+                type="button"
+                className={styles.addButton}
+                onClick={addCertification}
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                Add Certification
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {formData.certifications.map((cert, index) => {
+                const isExpanded = expandedItems.certifications.includes(index);
+                const isEditing = editingItems.certifications.includes(index);
+                
+                return (
+                  <div 
+                    key={index} 
+                    className={`${styles.itemCard} ${!isExpanded && !isEditing ? styles.itemCardCollapsed : ''}`}
+                    onClick={() => !isEditing && toggleExpanded('certifications', index)}
+                  >
+                    <div className={styles.itemHeader}>
+                      <h3 className={styles.itemTitle}>
+                        {cert.name || 'New Certification'}
+                        {cert.issuingOrganization && ` - ${cert.issuingOrganization}`}
+                      </h3>
+                      <div className={styles.itemActions}>
+                        {!isExpanded && !isEditing && (
+                          <button
+                            type="button"
+                            className={styles.actionButton}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpanded('certifications', index);
+                            }}
+                          >
+                            View
+                          </button>
+                        )}
+                        {isExpanded && !isEditing && (
+                          <>
+                            <button
+                              type="button"
+                              className={`${styles.actionButton} ${styles.editButton}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                startEditing('certifications', index);
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className={`${styles.actionButton} ${styles.cancelButton}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeCertification(index);
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {(isExpanded || isEditing) && (
+                      <div className="mt-4 space-y-4">
+                        {isEditing ? (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor={`certification-${index}-name`}>Name</Label>
+                                <Input
+                                  id={`certification-${index}-name`}
+                                  value={tempFormData.certifications[index]?.name || ''}
+                                  onChange={(e) => handleCertificationFieldChange(index, 'name', e.target.value)}
+                                  required
+                                  className={styles.input}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`certification-${index}-issuer`}>Issuing Organization</Label>
+                                <Input
+                                  id={`certification-${index}-issuer`}
+                                  value={tempFormData.certifications[index]?.issuingOrganization || ''}
+                                  onChange={(e) => handleCertificationFieldChange(index, 'issuingOrganization', e.target.value)}
+                                  required
+                                  className={styles.input}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <Label htmlFor={`certification-${index}-date`}>Issue Date</Label>
+                              <Input
+                                id={`certification-${index}-date`}
+                                type="date"
+                                value={tempFormData.certifications[index]?.issueDate || ''}
+                                onChange={(e) => handleCertificationFieldChange(index, 'issueDate', e.target.value)}
+                                required
+                                className={styles.input}
+                              />
+                            </div>
+                            <div className="flex justify-end space-x-2 mt-4">
+                              <button
+                                type="button"
+                                className={`${styles.actionButton} ${styles.cancelButton}`}
+                                onClick={() => cancelEditing('certifications', index)}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                className={`${styles.actionButton} ${styles.saveButton}`}
+                                onClick={() => saveEditing('certifications', index)}
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="space-y-2">
+                            <p><strong>Name:</strong> {cert.name}</p>
+                            <p><strong>Issuing Organization:</strong> {cert.issuingOrganization}</p>
+                            <p><strong>Issue Date:</strong> {new Date(cert.issueDate).toLocaleDateString()}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+  
+          <div className="flex justify-end space-x-4 mt-8">
             <Button
               type="button"
-              onClick={addExperience}
-              className={styles.actionButton}
+              onClick={onCancel}
+              className={styles.secondaryButton}
+              disabled={isLoading}
             >
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Add Experience
+              Cancel
             </Button>
-          </div>
-          {formData.experience.map((exp, index) => (
-            <div key={index} className="mb-4 p-4 border rounded-lg">
-              <div className="grid grid-cols-1 gap-4">
-                <Input
-                  placeholder="Company"
-                  value={tempFormData.experience[index]?.company || ''}
-                  onChange={(e) => handleExperienceFieldChange(index, 'company', e.target.value)}
-                  disabled={!editingItems.experience.includes(index)}
-                />
-                <Input
-                  placeholder="Position"
-                  value={tempFormData.experience[index]?.position || ''}
-                  onChange={(e) => handleExperienceFieldChange(index, 'position', e.target.value)}
-                  disabled={!editingItems.experience.includes(index)}
-                />
-                <Textarea
-                  placeholder="Description"
-                  value={tempFormData.experience[index]?.description || ''}
-                  onChange={(e) => handleExperienceFieldChange(index, 'description', e.target.value)}
-                  disabled={!editingItems.experience.includes(index)}
-                  rows={3}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <Input
-                    type="number"
-                    placeholder="Start Year"
-                    value={tempFormData.experience[index]?.startYear || ''}
-                    onChange={(e) => handleExperienceFieldChange(index, 'startYear', parseInt(e.target.value))}
-                    disabled={!editingItems.experience.includes(index)}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="End Year"
-                    value={tempFormData.experience[index]?.endYear || ''}
-                    onChange={(e) => handleExperienceFieldChange(index, 'endYear', parseInt(e.target.value))}
-                    disabled={!editingItems.experience.includes(index)}
-                  />
-                </div>
-              </div>
-              <div className="mt-4 flex justify-end space-x-2">
-                {editingItems.experience.includes(index) ? (
-                  <>
-                    <Button
-                      type="button"
-                      onClick={() => saveEditing('experience', index)}
-                      className={styles.actionButton}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => cancelEditing('experience', index)}
-                      className={`${styles.actionButton} ${styles.cancelButton}`}
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      type="button"
-                      onClick={() => startEditing('experience', index)}
-                      className={styles.actionButton}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => removeExperience(index)}
-                      className={`${styles.actionButton} ${styles.cancelButton}`}
-                    >
-                      Remove
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <Label>Certifications</Label>
             <Button
-              type="button"
-              onClick={addCertification}
-              className={styles.actionButton}
+              type="submit"
+              className={styles.primaryButton}
+              disabled={isLoading}
             >
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Add Certification
+              {isLoading ? 'Saving...' : 'Save'}
             </Button>
           </div>
-          {formData.certifications.map((cert, index) => (
-            <div key={index} className="mb-4 p-4 border rounded-lg">
-              <div className="grid grid-cols-1 gap-4">
-                <Input
-                  placeholder="Name"
-                  value={tempFormData.certifications[index]?.name || ''}
-                  onChange={(e) => handleCertificationFieldChange(index, 'name', e.target.value)}
-                  disabled={!editingItems.certifications.includes(index)}
-                />
-                <Input
-                  placeholder="Issuing Organization"
-                  value={tempFormData.certifications[index]?.issuingOrganization || ''}
-                  onChange={(e) => handleCertificationFieldChange(index, 'issuingOrganization', e.target.value)}
-                  disabled={!editingItems.certifications.includes(index)}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <Input
-                    type="number"
-                    placeholder="Year"
-                    value={tempFormData.certifications[index]?.year || ''}
-                    onChange={(e) => handleCertificationFieldChange(index, 'year', parseInt(e.target.value))}
-                    disabled={!editingItems.certifications.includes(index)}
-                  />
-                  <Input
-                    type="date"
-                    placeholder="Issue Date"
-                    value={tempFormData.certifications[index]?.issueDate || ''}
-                    onChange={(e) => handleCertificationFieldChange(index, 'issueDate', e.target.value)}
-                    disabled={!editingItems.certifications.includes(index)}
-                  />
-                </div>
-              </div>
-              <div className="mt-4 flex justify-end space-x-2">
-                {editingItems.certifications.includes(index) ? (
-                  <>
-                    <Button
-                      type="button"
-                      onClick={() => saveEditing('certifications', index)}
-                      className={styles.actionButton}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => cancelEditing('certifications', index)}
-                      className={`${styles.actionButton} ${styles.cancelButton}`}
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      type="button"
-                      onClick={() => startEditing('certifications', index)}
-                      className={styles.actionButton}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => removeCertification(index)}
-                      className={`${styles.actionButton} ${styles.cancelButton}`}
-                    >
-                      Remove
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {error && (
-          <div className="text-red-500 mb-4">{error}</div>
-        )}
-
-        <div className="flex justify-end space-x-4">
-          <Button
-            type="button"
-            onClick={onCancel}
-            variant="outline"
-            disabled={isLoading}
-            className={styles.secondaryButton}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className={styles.primaryButton}
-          >
-            {isLoading ? 'Submitting...' : 'Submit'}
-          </Button>
-        </div>
+        </form>
       </div>
-    </form>
+    </div>
   );
-}
+} 

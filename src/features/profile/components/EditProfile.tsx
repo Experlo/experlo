@@ -3,12 +3,14 @@
 import React, { useState, FormEvent, ChangeEvent, KeyboardEvent } from 'react';
 import { SerializedUser } from '@/types/user';
 import { Expert, Education, Experience } from '@/types/expert';
+// Simple ID generator function to replace uuid
+const generateId = () => Math.random().toString(36).substring(2, 15);
 import { Label } from '@/shared/components/ui/Label';
 import { Input } from '@/shared/components/ui/Input';
 import { Button } from '@/shared/components/ui/Button';
 import { Textarea } from '@/shared/components/ui/Textarea';
 import { XCircleIcon, PlusIcon } from '@heroicons/react/24/outline';
-import styles from './EditExpertProfile.module.css';
+import styles from './EditProfile.module.css';
 
 interface Certification {
   id: string;
@@ -22,11 +24,10 @@ interface Certification {
   updatedAt: string;
 }
 
-interface CertificationForm extends Omit<Certification, 'createdAt' | 'updatedAt'> {
+interface CertificationForm extends Omit<Certification, 'createdAt' | 'updatedAt' | 'year'> {
   id: string;
   name: string;
   issuer: string;
-  year: number;
   expertId: string;
   issuingOrganization: string;
   issueDate: string;
@@ -46,27 +47,39 @@ interface FormData {
   certifications: CertificationForm[];
 }
 
-interface EditExpertProfileProps {
+interface EditProfile {
   userData: SerializedUser;
-  expertData: Expert;
+  expertData?: Expert;
   onCancel: () => void;
-  onSave: (formData: FormData) => Promise<void>;
+  onSave: (data: any) => void;
   isLoading?: boolean;
 }
 
-export default function EditExpertProfile({ userData, expertData, onCancel, onSave, isLoading = false }: EditExpertProfileProps): React.ReactElement {
+export default function EditProfile({ userData, expertData, onCancel, onSave, isLoading = false }: EditProfile): React.ReactElement {
+  // Check if user is an expert
+  const isExpert = !!expertData;
+
   const [formData, setFormData] = useState<FormData>({
     firstName: userData.firstName || '',
     lastName: userData.lastName || '',
     email: userData.email || '',
     image: userData.image || '',
-    title: expertData?.title || '',
-    bio: expertData?.bio || '',
-    categories: expertData?.categories || [],
-    pricePerHour: expertData?.pricePerHour || 0,
-    education: expertData?.education || [],
-    experience: expertData?.experience || [],
-    certifications: expertData?.certifications || [],
+    title: isExpert && expertData?.title ? expertData.title : '',
+    bio: isExpert && expertData?.bio ? expertData.bio : '',
+    categories: isExpert && expertData?.categories ? expertData.categories : [],
+    pricePerHour: isExpert && expertData?.pricePerHour ? expertData.pricePerHour : 0,
+    education: isExpert && expertData?.education ? expertData.education.map(item => ({
+      ...item,
+      id: item.id || generateId()
+    })) : [],
+    experience: isExpert && expertData?.experience ? expertData.experience.map(item => ({
+      ...item,
+      id: item.id || generateId()
+    })) : [],
+    certifications: isExpert && expertData?.certifications ? expertData.certifications.map(item => ({
+      ...item,
+      id: item.id || generateId()
+    })) : [],
   });
 
   const [error, setError] = useState('');
@@ -85,8 +98,6 @@ export default function EditExpertProfile({ userData, expertData, onCancel, onSa
   const [tempFormData, setTempFormData] = useState<FormData>({
     ...formData
   });
-
-  const isExpert = !!expertData;
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -191,7 +202,7 @@ export default function EditExpertProfile({ userData, expertData, onCancel, onSa
   };
 
   const addEducation = () => {
-    const newEducation = { institution: '', degree: '', field: '', startYear: 0, endYear: 0 };
+    const newEducation = { institution: '', degree: '', field: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear() };
     const newIndex = formData.education.length;
     
     setFormData(prev => ({
@@ -233,7 +244,7 @@ export default function EditExpertProfile({ userData, expertData, onCancel, onSa
   };
 
   const addExperience = () => {
-    const newExperience = { company: '', position: '', description: '', startYear: 0, endYear: 0 };
+    const newExperience = { company: '', position: '', description: '', startYear: new Date().getFullYear(), endYear: new Date().getFullYear() };
     const newIndex = formData.experience.length;
     
     setFormData(prev => ({
@@ -279,10 +290,9 @@ export default function EditExpertProfile({ userData, expertData, onCancel, onSa
       id: '',
       name: '',
       issuer: '',
-      year: 0,
       expertId: '',
       issuingOrganization: '',
-      issueDate: ''
+      issueDate: new Date().toISOString().split('T')[0]
     };
     const newIndex = formData.certifications.length;
     
@@ -338,108 +348,153 @@ export default function EditExpertProfile({ userData, expertData, onCancel, onSa
         
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>Personal Information</h2>
-            <p className={styles.sectionSubtitle}>Update your personal and professional details.</p>
+            <p className={styles.sectionSubtitle}>Update your personal details.</p>
 
-            <div className={styles.fieldGroup}>
-              <Label htmlFor="title">Professional Title</Label>
-              <Input
-                id="title"
-                type="text"
-                placeholder="e.g., Senior Software Engineer, Business Consultant"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className={styles.input}
-              />
-            </div>
-
-            <div className={styles.fieldGroup}>
-              <Label htmlFor="bio">Professional Bio</Label>
-              <Textarea
-                id="bio"
-                placeholder="Tell us about your professional background, expertise, and what makes you unique..."
-                value={formData.bio}
-                onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-                className={styles.textarea}
-              />
-            </div>
-
-            <div className={styles.fieldGroup}>
-              <Label htmlFor="categories">Areas of Expertise</Label>
-              <div className={styles.tagsContainer}>
-                {formData.categories.map((category, index) => (
-                  <div className={styles.tag} key={index}>
-                    <span className={styles.tagText}>{category}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeCategory(index)}
-                      className="ml-1"
-                    >
-                      <XCircleIcon className={styles.tagDelete} />
-                    </button>
-                  </div>
-                ))}
-                <input
-                  type="text"
-                  id="categories"
-                  className={styles.tagInput}
-                  placeholder={formData.categories.length === 0 ? "e.g., Business Strategy, Technology Consulting (press Enter)" : ""}
-                  onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      const value = e.currentTarget.value.trim();
-                      if (value) {
-                        addCategory(value);
-                        e.currentTarget.value = '';
-                      }
-                    } else if (e.key === 'Backspace' && e.currentTarget.value === '' && formData.categories.length > 0) {
-                      setFormData((prev) => ({
-                        ...prev,
-                        categories: prev.categories.slice(0, -1)
-                      }));
-                    }
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className={styles.fieldGroup}>
-              <Label htmlFor="pricePerHour">Hourly Rate (USD)</Label>
-              <div className="relative">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className={styles.fieldGroup}>
+                <Label htmlFor="firstName">First Name</Label>
                 <Input
-                  id="pricePerHour"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.pricePerHour}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '') {
-                      setFormData(prev => ({ ...prev, pricePerHour: 0 }));
-                      return;
-                    }
-                    const numValue = parseFloat(value);
-                    if (!isNaN(numValue) && numValue >= 0) {
-                      setFormData(prev => ({ ...prev, pricePerHour: numValue }));
-                    }
-                  }}
-                  onBlur={(e) => {
-                    const value = parseFloat(e.target.value);
-                    if (!isNaN(value) && value >= 0) {
-                      setFormData(prev => ({ ...prev, pricePerHour: Math.round(value * 100) / 100 }));
-                    }
-                  }}
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  placeholder="First Name"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  required
                   className={styles.input}
                 />
               </div>
-              <p className="text-sm text-gray-500 mt-1">This will be your standard rate for consulting sessions.</p>
+              <div className={styles.fieldGroup}>
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  placeholder="Last Name"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  required
+                  className={styles.input}
+                />
+              </div>
             </div>
+
+            <div className={styles.fieldGroup}>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                disabled
+                className={`${styles.input} bg-gray-100`}
+              />
+              <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+            </div>
+
+
+            {isExpert && (
+              <>
+                <div className={styles.fieldGroup}>
+                  <Label htmlFor="title">Professional Title</Label>
+                  <Input
+                    id="title"
+                    name="title"
+                    type="text"
+                    placeholder="e.g., Senior Software Engineer, Business Consultant"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    required
+                    className={styles.input}
+                  />
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <Label htmlFor="bio">Professional Bio</Label>
+                  <Textarea
+                    id="bio"
+                    name="bio"
+                    placeholder="Tell us about your professional background, expertise, and what makes you unique..."
+                    value={formData.bio}
+                    onChange={handleInputChange}
+                    required
+                    className={styles.textarea}
+                  />
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <Label htmlFor="categories">Areas of Expertise</Label>
+                  <div className={styles.tagsContainer}>
+                    {formData.categories.map((category, index) => (
+                      <div className={styles.tag} key={index}>
+                        <span className={styles.tagText}>{category}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeCategory(index)}
+                          className="ml-1"
+                        >
+                          <XCircleIcon className={styles.tagDelete} />
+                        </button>
+                      </div>
+                    ))}
+                    <input
+                      type="text"
+                      id="categories"
+                      className={styles.tagInput}
+                      placeholder={formData.categories.length === 0 ? "e.g., Business Strategy, Technology Consulting (press Enter)" : ""}
+                      onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const value = e.currentTarget.value.trim();
+                          if (value) {
+                            addCategory(value);
+                            e.currentTarget.value = '';
+                          }
+                        } else if (e.key === 'Backspace' && e.currentTarget.value === '' && formData.categories.length > 0) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            categories: prev.categories.slice(0, -1)
+                          }));
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <Label htmlFor="pricePerHour">Hourly Rate (USD)</Label>
+                  <div className="relative">
+                    <Input
+                      id="pricePerHour"
+                      name="pricePerHour"
+                      type="number"
+                      min="0"
+                      step=""
+                      value={formData.pricePerHour}
+                      onChange={handleInputChange}
+                      required
+                      onBlur={(e) => {
+                        const value = parseFloat(e.target.value);
+                        if (!isNaN(value) && value >= 0) {
+                          setFormData(prev => ({ ...prev, pricePerHour: Math.round(value * 100) / 100 }));
+                        }
+                      }}
+                      className={styles.input}
+                    />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <span className="text-gray-500 sm:text-sm">USD</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">This will be your standard rate for consulting sessions.</p>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Expert Profile Section */}
           {isExpert && (
             <>
               {/* Education Section */}
-              <div className={styles.section}>
               <div className={styles.section}>
                 <h2 className={styles.sectionTitle}>Education</h2>
                 <p className={styles.sectionSubtitle}>Add your educational background and qualifications.</p>
@@ -549,9 +604,12 @@ export default function EditExpertProfile({ userData, expertData, onCancel, onSa
                                   <Label htmlFor={`startYear-${idx}`}>Start Year</Label>
                                   <Input
                                     id={`startYear-${idx}`}
-                                    type="number"
-                                    value={currentData.startYear}
-                                    onChange={(e) => handleEducationFieldChange(idx, 'startYear', parseInt(e.target.value))}
+                                    type="date"
+                                    value={currentData.startYear ? new Date(currentData.startYear, 0, 1).toISOString().split('T')[0] : ''}
+                                    onChange={(e) => {
+                                      const date = new Date(e.target.value);
+                                      handleEducationFieldChange(idx, 'startYear', date.getFullYear());
+                                    }}
                                     className={styles.input}
                                     disabled={!isEditing}
                                   />
@@ -560,9 +618,12 @@ export default function EditExpertProfile({ userData, expertData, onCancel, onSa
                                   <Label htmlFor={`endYear-${idx}`}>End Year</Label>
                                   <Input
                                     id={`endYear-${idx}`}
-                                    type="number"
-                                    value={currentData.endYear}
-                                    onChange={(e) => handleEducationFieldChange(idx, 'endYear', parseInt(e.target.value))}
+                                    type="date"
+                                    value={currentData.endYear ? new Date(currentData.endYear, 0, 1).toISOString().split('T')[0] : ''}
+                                    onChange={(e) => {
+                                      const date = new Date(e.target.value);
+                                      handleEducationFieldChange(idx, 'endYear', date.getFullYear());
+                                    }}
                                     className={styles.input}
                                     disabled={!isEditing}
                                   />
@@ -678,9 +739,12 @@ export default function EditExpertProfile({ userData, expertData, onCancel, onSa
                                   <Label htmlFor={`startYear-${idx}`}>Start Year</Label>
                                   <Input
                                     id={`startYear-${idx}`}
-                                    type="number"
-                                    value={currentData.startYear}
-                                    onChange={(e) => handleExperienceFieldChange(idx, 'startYear', parseInt(e.target.value))}
+                                    type="date"
+                                    value={currentData.startYear ? new Date(currentData.startYear, 0, 1).toISOString().split('T')[0] : ''}
+                                    onChange={(e) => {
+                                      const date = new Date(e.target.value);
+                                      handleExperienceFieldChange(idx, 'startYear', date.getFullYear());
+                                    }}
                                     className={styles.input}
                                     disabled={!isEditing}
                                   />
@@ -689,9 +753,12 @@ export default function EditExpertProfile({ userData, expertData, onCancel, onSa
                                   <Label htmlFor={`endYear-${idx}`}>End Year</Label>
                                   <Input
                                     id={`endYear-${idx}`}
-                                    type="number"
-                                    value={currentData.endYear}
-                                    onChange={(e) => handleExperienceFieldChange(idx, 'endYear', parseInt(e.target.value))}
+                                    type="date"
+                                    value={currentData.endYear ? new Date(currentData.endYear, 0, 1).toISOString().split('T')[0] : ''}
+                                    onChange={(e) => {
+                                      const date = new Date(e.target.value);
+                                      handleExperienceFieldChange(idx, 'endYear', date.getFullYear());
+                                    }}
                                     className={styles.input}
                                     disabled={!isEditing}
                                   />
@@ -813,12 +880,12 @@ export default function EditExpertProfile({ userData, expertData, onCancel, onSa
                                 />
                               </div>
                               <div>
-                                <Label htmlFor={`certYear-${idx}`}>Year</Label>
+                                <Label htmlFor={`issueDate-${idx}`}>Issue Date</Label>
                                 <Input
-                                  id={`certYear-${idx}`}
-                                  type="number"
-                                  value={currentData.year}
-                                  onChange={(e) => handleCertificationFieldChange(idx, 'year', parseInt(e.target.value))}
+                                  id={`issueDate-${idx}`}
+                                  type="date"
+                                  value={currentData.issueDate || ''}
+                                  onChange={(e) => handleCertificationFieldChange(idx, 'issueDate', e.target.value)}
                                   className={styles.input}
                                   disabled={!isEditing}
                                 />
@@ -830,7 +897,6 @@ export default function EditExpertProfile({ userData, expertData, onCancel, onSa
                     );
                   })}
                 </div>
-              </div>
               </div>
               
             </>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { type Prisma } from '@prisma/client';
 import { type SerializedExpert } from '@/types/expert';
+import { verifyToken, getAuthToken } from '@/lib/auth/jwt';
 
 type ExpertWithRelations = Prisma.ExpertProfileGetPayload<{
   include: {
@@ -10,11 +11,29 @@ type ExpertWithRelations = Prisma.ExpertProfileGetPayload<{
   };
 }>;
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // Get top 4 experts by rating
+    // Get the current user from the auth token
+    const token = await getAuthToken();
+    let currentUserId: string | undefined;
+    
+    if (token) {
+      try {
+        const payload = await verifyToken(token);
+        currentUserId = payload?.userId;
+      } catch (error) {
+        console.error('Error verifying token:', error);
+      }
+    }
+    
+    // Get top 4 experts by rating, excluding the current user if they're logged in
     const experts = await prisma.expertProfile.findMany({
       take: 4,
+      where: currentUserId ? {
+        userId: {
+          not: currentUserId
+        }
+      } : {},
       orderBy: {
         createdAt: 'desc'
       },

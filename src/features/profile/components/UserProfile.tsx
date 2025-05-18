@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { SerializedUser } from '@/types/user';
 import { SerializedExpert } from '@/types/expert';
 import Image from 'next/image';
-import EditExpertProfile from './EditExpertProfile';
+import EditProfile from '@/features/profile/components/EditProfile';
 import { ClockIcon, StarIcon, CalendarIcon, MapPinIcon } from '@heroicons/react/24/solid';
 import Header from '@/shared/components/ui/Header';
 import { Button } from '@/shared/components/ui/Button';
@@ -251,11 +251,16 @@ export default function UserProfile({ user, expertData: initialExpertData, isOwn
                 {/* About section */}
                 <div className="mt-8 flex justify-between items-start">
                   <div className="flex-1">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">About</h2>
-                    <div className="prose max-w-none text-gray-600">
-                      {expertData?.bio || 'No bio provided yet.'}
-                    </div>
-                    {isOwnProfile && expertData && (
+                    
+                    {expertData && (
+                      <>
+                      <h2 className="text-xl font-semibold text-gray-900 mb-4">About</h2>
+                      <div className="prose max-w-none text-gray-600">
+                        {expertData?.bio || 'No bio provided yet.'}
+                      </div>
+                      </>
+                    )}
+                    {isOwnProfile && (
                       <div className="flex justify-end mt-4">
                         <button
                           onClick={() => setIsEditing(true)}
@@ -265,8 +270,8 @@ export default function UserProfile({ user, expertData: initialExpertData, isOwn
                         </button>
                       </div>
                     )}
-                    {isEditing && expertData && (
-                      <EditExpertProfile
+                    {isEditing && (
+                      <EditProfile
                         userData={user}
                         expertData={expertData}
                         onCancel={handleCancelEdit}

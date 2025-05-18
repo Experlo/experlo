@@ -26,9 +26,28 @@ interface CertificationInput {
   year: number;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // Get the current user from the auth token
+    const token = await getAuthToken();
+    let currentUserId: string | undefined;
+    
+    if (token) {
+      try {
+        const payload = await verifyToken(token);
+        currentUserId = payload?.userId;
+      } catch (error) {
+        console.error('Error verifying token:', error);
+      }
+    }
+    
+    // Find all experts, excluding the current user if they're logged in
     const experts = await prisma.expertProfile.findMany({
+      where: currentUserId ? {
+        userId: {
+          not: currentUserId
+        }
+      } : {},
       include: {
         user: true,
         bookings: true,
