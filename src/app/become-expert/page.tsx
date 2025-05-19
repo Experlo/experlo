@@ -3,9 +3,11 @@
 import { useRouter } from 'next/navigation';
 import BecomeExpertForm from './BecomeExpertForm';
 import { FormData } from './BecomeExpertForm';
+import { useUser } from '@/context/UserContext';
 
 export default function BecomeExpertPage() {
   const router = useRouter();
+  const { refetchUser } = useUser();
 
   const handleSave = async (formData: FormData) => {
     try {
@@ -35,6 +37,9 @@ export default function BecomeExpertPage() {
         throw new Error(`Failed to create expert profile: ${data.error || response.statusText}`);
       }
 
+      // Refresh user data to update isExpert status
+      await refetchUser();
+      
       // Success - redirect to dashboard
       router.push('/dashboard');
     } catch (error) {

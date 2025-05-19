@@ -24,12 +24,16 @@ interface Certification {
   updatedAt: string;
 }
 
-interface CertificationForm extends Omit<Certification, 'createdAt' | 'updatedAt' | 'year'> {
+// Define a standalone interface instead of extending to avoid TypeScript issues
+interface CertificationForm {
   id: string;
   name: string;
   issuer: string;
   expertId: string;
+  // Note: issuingOrganization doesn't exist in the database schema, but we keep it for UI
+  // We'll treat issuer and issuingOrganization as the same field (issuer is what's in the DB)
   issuingOrganization: string;
+  // issueDate is computed from 'year' field in the database
   issueDate: string;
 }
 
@@ -98,7 +102,12 @@ export default function EditProfile({ userData, expertData, onCancel, onSave, is
     })) : [],
     certifications: isExpert && expertData?.certifications ? expertData.certifications.map(item => ({
       ...item,
-      id: item.id || generateId()
+      id: item.id || generateId(),
+      // For certifications, handle the conversion between year and issueDate
+      // If issueDate is missing but year is present, create it
+      issueDate: item.issueDate || (item.year ? `${item.year}-01-01` : ''),
+      // Use issuer as issuingOrganization if not present
+      issuingOrganization: item.issuingOrganization || item.issuer || ''
     })) : [],
   });
 
@@ -306,13 +315,14 @@ export default function EditProfile({ userData, expertData, onCancel, onSave, is
   };
 
   const addCertification = () => {
+    const currentDate = new Date().toISOString().split('T')[0];
     const newCertification: CertificationForm = {
       id: '',
       name: '',
       issuer: '',
       expertId: '',
-      issuingOrganization: '',
-      issueDate: new Date().toISOString().split('T')[0]
+      issuingOrganization: '', // This will be copied to issuer when saving
+      issueDate: currentDate
     };
     const newIndex = formData.certifications.length;
     
@@ -940,8 +950,12 @@ export default function EditProfile({ userData, expertData, onCancel, onSave, is
                                 <Label htmlFor={`certIssuer-${idx}`}>Issuing Organization</Label>
                                 <Input
                                   id={`certIssuer-${idx}`}
-                                  value={currentData.issuer}
-                                  onChange={(e) => handleCertificationFieldChange(idx, 'issuer', e.target.value)}
+                                  value={currentData.issuer || currentData.issuingOrganization || ''}
+                                  onChange={(e) => {
+                                    // Update both fields to ensure data consistency
+                                    handleCertificationFieldChange(idx, 'issuer', e.target.value);
+                                    handleCertificationFieldChange(idx, 'issuingOrganization', e.target.value);
+                                  }}
                                   className={styles.input}
                                   disabled={!isEditing}
                                 />

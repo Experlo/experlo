@@ -20,7 +20,15 @@ export default function Header() {
 
   if (!user) {
     return null;
-  };
+  }
+  
+  // Log user data to debug profile picture
+  console.log('User data in header:', { 
+    hasImage: !!user.image, 
+    imageUrl: user.image,
+    firstName: user.firstName,
+    lastName: user.lastName
+  });
 
   return (
     <header className="bg-white shadow-sm fixed w-full top-0 z-50">
@@ -36,13 +44,26 @@ export default function Header() {
 
           <div className="flex items-center">
             <Menu as="div" className="relative ml-3">
-              <Menu.Button className="flex items-center max-w-xs bg-white rounded-full hover:ring-2 hover:ring-indigo-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+              <Menu.Button className="flex items-center max-w-xs bg-white rounded-full hover:ring-2 hover:ring-indigo-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer">
                 <div className="relative">
                   {user.image ? (
                     <img
-                      src={user.image}
+                      src={user.image.startsWith('http') ? user.image : user.image.startsWith('/') ? user.image : `/${user.image}`}
                       alt={`${user.firstName} ${user.lastName}`}
                       className="h-9 w-9 rounded-full object-cover border-2 border-white shadow-sm"
+                      onError={(e) => {
+                        console.error('Error loading profile image:', e);
+                        // Fallback to icon if image fails to load
+                        e.currentTarget.style.display = 'none';
+                        // We'll need to show the icon as fallback
+                        const parent = e.currentTarget.parentElement;
+                        if (parent) {
+                          const iconEl = document.createElement('span');
+                          iconEl.className = 'h-9 w-9 text-indigo-600 flex items-center justify-center';
+                          iconEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" /></svg>';
+                          parent.appendChild(iconEl);
+                        }
+                      }}
                     />
                   ) : (
                     <UserCircleIcon className="h-9 w-9 text-indigo-600 cursor-pointer" />

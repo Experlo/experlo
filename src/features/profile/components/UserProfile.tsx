@@ -23,6 +23,14 @@ interface FormData {
   image: string;
   gender?: string | null;
   dateOfBirth?: string | null;
+  // Expert-specific fields
+  title?: string;
+  bio?: string;
+  categories?: string[];
+  pricePerHour?: number;
+  education?: any[];
+  experience?: any[];
+  certifications?: any[];
 }
 
 interface UploadResponse {
@@ -36,18 +44,169 @@ export default function UserProfile({ user, expertData: initialExpertData, isOwn
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [expertData, setExpertData] = useState<SerializedExpert | undefined>(initialExpertData);
+  const [refreshCounter, setRefreshCounter] = useState(0);
 
   const [isEditingExpert, setIsEditingExpert] = useState(false);
 
   const handleCancelEdit = () => setIsEditing(false);
 
-  const handleSaveExpert = async (formData: FormData) => {
+  const handleSave = async (updatedData: FormData) => {
     setIsLoading(true);
     try {
-      // TODO: Implement save logic
+      console.log('Received data from EditProfile:', updatedData);
+      
+      // Update the form data with the received values
+      const profileData: any = {
+        firstName: updatedData.firstName,
+        lastName: updatedData.lastName,
+        image: updatedData.image || user.image,
+        gender: updatedData.gender,
+        dateOfBirth: updatedData.dateOfBirth
+      };
+      
+      // Handle expert-specific data if available
+      if (user.isExpert && expertData) {
+        // First save basic profile data
+        console.log('User is an expert, handling expert-specific data');
+        
+        // Add expert-specific fields to the update payload
+        if (updatedData.title) {
+          profileData.title = updatedData.title;
+        }
+        if (updatedData.bio) {
+          profileData.bio = updatedData.bio;
+        }
+        if (updatedData.categories) {
+          profileData.categories = updatedData.categories;
+        }
+        if (updatedData.pricePerHour !== undefined) {
+          profileData.pricePerHour = updatedData.pricePerHour;
+        }
+        // Include education, experience, and certifications data
+        if (updatedData.education) {
+          profileData.education = updatedData.education;
+        }
+        if (updatedData.experience) {
+          profileData.experience = updatedData.experience;
+        }
+        if (updatedData.certifications) {
+          profileData.certifications = updatedData.certifications;
+        }
+      }
+      
+      console.log('Sending profile data to API:', profileData);
+      
+      // Call the API to update the profile
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(profileData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to update profile: ${response.status} ${errorText}`);
+      }
+      
+      // Get the updated data from the response
+      const updatedUserData = await response.json();
+      console.log('Updated user data from server:', updatedUserData);
+      
+      // Update local state with server response
+      setFormData({
+        firstName: updatedUserData.firstName || '',
+        lastName: updatedUserData.lastName || '',
+        image: updatedUserData.image || '',
+        gender: updatedUserData.gender || null,
+        dateOfBirth: updatedUserData.dateOfBirth || null
+      });
+      
+      // Update the user object directly for immediate UI update
+      user.firstName = updatedUserData.firstName;
+      user.lastName = updatedUserData.lastName;
+      user.image = updatedUserData.image;
+      user.gender = updatedUserData.gender;
+      user.dateOfBirth = updatedUserData.dateOfBirth;
+      
+      if (updatedUserData.image) {
+        setPreviewUrl(updatedUserData.image);
+      }
+      
+      // Update expert data if available
+      if (updatedUserData.expertProfile) {
+        setExpertData(updatedUserData.expertProfile);
+      }
+      
+      // Force a re-render of the component without a full page reload
+      // This is required to ensure the UI reflects the updated data
+      // Temporarily force an update by using the state variable
+      setRefreshCounter(prev => prev + 1);
+      
+      // Update the UI with the new data
+      const updatedFormData: FormData = {
+        firstName: updatedUserData.firstName || '',
+        lastName: updatedUserData.lastName || '',
+        image: updatedUserData.image || '',
+        gender: updatedUserData.gender || null,
+        dateOfBirth: updatedUserData.dateOfBirth || null
+      };
+      
+      // Add expert-specific fields if available
+      if (updatedUserData.expertProfile) {
+        updatedFormData.title = updatedUserData.expertProfile.title;
+        updatedFormData.bio = updatedUserData.expertProfile.bio;
+        updatedFormData.categories = updatedUserData.expertProfile.categories;
+        updatedFormData.pricePerHour = updatedUserData.expertProfile.pricePerHour;
+      }
+      
+      // Update the form data with the new values
+      setFormData(updatedFormData);
+      
+      // Close the edit mode
       setIsEditing(false);
+      
+      // Show success message
+      const successMessage = document.createElement('div');
+      successMessage.className = 'fixed bottom-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded';
+      successMessage.innerHTML = 'Profile updated successfully!';
+      document.body.appendChild(successMessage);
+      
+      // Remove the success message after 3 seconds
+      setTimeout(() => {
+        document.body.removeChild(successMessage);
+      }, 3000);
+      
+      // Instead of reloading the page, trigger a re-render with new state
+      // Force a re-render with a state update
+      // Update any class instances directly for profile components
+      
+      // Update visible fields directly in the DOM if needed
+      try {
+        // Find and update name elements
+        const nameElements = document.querySelectorAll('.profile-name, h1.text-2xl');
+        nameElements.forEach(el => {
+          if (el instanceof HTMLElement) {
+            el.textContent = `${updatedUserData.firstName} ${updatedUserData.lastName}`;
+          }
+        });
+        
+        // Find and update gender/age display
+        const genderElements = document.querySelectorAll('.gender-display, .gender-text');
+        genderElements.forEach(el => {
+          if (el instanceof HTMLElement && el.textContent?.includes('Gender') && updatedUserData.gender) {
+            el.textContent = updatedUserData.gender;
+          }
+        });
+        
+        console.log('Updated DOM elements directly to reflect changes');
+      } catch (domError) {
+        console.error('Error updating DOM directly:', domError);
+      }
     } catch (error) {
       console.error('Failed to save expert profile:', error);
+      setError(error instanceof Error ? error.message : 'Failed to save profile');
     } finally {
       setIsLoading(false);
     }
@@ -352,7 +511,7 @@ export default function UserProfile({ user, expertData: initialExpertData, isOwn
                         userData={user}
                         expertData={expertData}
                         onCancel={handleCancelEdit}
-                        onSave={handleSaveExpert}
+                        onSave={handleSave}
                         isLoading={isLoading}
                       />
                     )}
