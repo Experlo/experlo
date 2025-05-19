@@ -6,6 +6,7 @@ import FeaturedExperts from '@/features/dashboard/components/FeaturedExperts';
 import AIExperts from '@/features/dashboard/components/AIExperts';
 import HowItWorks from '@/features/dashboard/components/HowItWorks';
 import HeroSection from '@/features/dashboard/components/HeroSection';
+import UpcomingBookingsSection from '@/features/dashboard/components/UpcomingBookingsSection';
 import type { SerializedExpert } from '@/types/expert';
 
 export default function DashboardPage() {
@@ -59,6 +60,9 @@ export default function DashboardPage() {
       
       <div className="py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          {/* Upcoming Bookings Section */}
+          <UpcomingBookingsSection />
+          
           {/* Featured Experts */}
           {expertsLoading ? (
             <div className="animate-pulse space-y-4">

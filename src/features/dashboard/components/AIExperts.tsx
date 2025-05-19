@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ChevronRightIcon } from '@heroicons/react/24/outline';
 
 const aiExperts = [
   {
@@ -67,11 +68,9 @@ export default function AIExperts() {
             Available 24/7 with subscription - no scheduling required
           </p>
         </div>
-        <Link
-          href="/ai/subscription"
-          className="text-base font-semibold text-indigo-600 hover:text-indigo-500"
-        >
-          View all →
+        <Link href="/ai/subscription" className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
+            View all
+            <ChevronRightIcon className="h-4 w-4 ml-1" />
         </Link>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

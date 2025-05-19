@@ -1,15 +1,19 @@
 'use client';
 
+import { useState } from 'react';
 import { CalendarIcon, ClockIcon, StarIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import type { Experience, Education, Certification } from '@/types/schema';
 import type { SerializedExpert } from '@/types/expert';
+import BookingModal from '@/features/booking/components/BookingModal';
+import UserExpertBookings from '@/features/booking/components/UserExpertBookings';
 
 interface ExpertProfileProps {
   expert: SerializedExpert;
 }
 
 export default function ExpertProfile({ expert }: ExpertProfileProps) {
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   // Debug expert data
   console.log('Expert data in profile:', expert);
   console.log('User data in expert profile:', expert.user);
@@ -162,13 +166,24 @@ export default function ExpertProfile({ expert }: ExpertProfileProps) {
 
                   <button
                     className="w-full bg-[#4f46e5] hover:bg-[#4338ca] text-white px-4 py-2 rounded-md font-medium"
+                    onClick={() => setIsBookingModalOpen(true)}
                   >
                     Book Now
                   </button>
+                  
+                  {/* Booking Modal */}
+                  <BookingModal
+                    expert={expert}
+                    isOpen={isBookingModalOpen}
+                    onClose={() => setIsBookingModalOpen(false)}
+                  />
 
                   <div className="text-sm text-gray-500 text-center">
                     <p>Free cancellation up to 24 hours before your session</p>
                   </div>
+                  
+                  {/* Show user's bookings with this expert */}
+                  <UserExpertBookings expertId={expert.id} />
                 </div>
               </div>
             </div>

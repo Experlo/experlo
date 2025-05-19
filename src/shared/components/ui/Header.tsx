@@ -111,6 +111,16 @@ export default function Header() {
                     <Menu.Item>
                       {({ active }) => (
                         <Link
+                          href="/bookings"
+                          className={`${active ? 'bg-gray-50' : ''} block px-3 py-2 text-sm text-gray-700 rounded-md mx-1 transition-colors duration-150 hover:bg-gray-50`}
+                        >
+                          My Bookings
+                        </Link>
+                      )}
+                    </Menu.Item>
+                    <Menu.Item>
+                      {({ active }) => (
+                        <Link
                           href="/settings"
                           className={`${active ? 'bg-gray-50' : ''} block px-3 py-2 text-sm text-gray-700 rounded-md mx-1 transition-colors duration-150 hover:bg-gray-50`}
                         >
