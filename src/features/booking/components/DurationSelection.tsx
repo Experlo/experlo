@@ -14,7 +14,7 @@ const AVAILABLE_DURATIONS = [30, 60, 90];
 export default function DurationSelection({ expert, onSelectDuration }: DurationSelectionProps) {
   return (
     <div className="space-y-6">
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-gray-700">
         Select how long you'd like your session with {expert.user.firstName} to be.
       </p>
       

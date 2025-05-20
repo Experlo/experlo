@@ -19,17 +19,17 @@ export default function DateSelection({ expert, selectedDuration, onSelectDate, 
     const fetchAvailableDates = async () => {
       try {
         setLoading(true);
-        // This would normally be an API call to get available dates
-        // For now, we'll simulate it with dates for the next 14 days
+        // Get available dates for the next 3 months
         const dates: Date[] = [];
         const today = new Date();
+        const threeMonthsFromNow = new Date();
+        threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
         
-        for (let i = 1; i <= 14; i++) {
-          const date = new Date();
-          date.setDate(today.getDate() + i);
-          // Skip weekends for this example
+        // Loop through each day from tomorrow to 3 months from now
+        for (let date = new Date(today); date <= threeMonthsFromNow; date.setDate(date.getDate() + 1)) {
+          // Skip weekends
           if (date.getDay() !== 0 && date.getDay() !== 6) {
-            dates.push(date);
+            dates.push(new Date(date));
           }
         }
         
@@ -73,10 +73,10 @@ export default function DateSelection({ expert, selectedDuration, onSelectDate, 
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="max-h-[400px] overflow-y-auto pr-2 space-y-6">
           {Object.entries(groupedDates).map(([monthYear, dates]) => (
             <div key={monthYear}>
-              <h3 className="text-md font-medium text-gray-900 mb-3">{monthYear}</h3>
+              <h3 className="text-md font-medium text-gray-900 mb-3 sticky top-0 bg-white py-2">{monthYear}</h3>
               <div className="grid grid-cols-3 gap-2">
                 {dates.map((date) => (
                   <button

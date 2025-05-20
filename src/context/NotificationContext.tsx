@@ -166,11 +166,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           const startTimeWithBuffer = new Date(startTime);
           startTimeWithBuffer.setMinutes(startTimeWithBuffer.getMinutes() - 5);
           
-          // A booking is active if it's between start and end time OR 
-          // if it's within 5 minutes of starting (for early notification)
+          // A booking is active if it's currently within its scheduled time
           const isActive = (
-            ((now >= startTimeWithBuffer && now < startTime) || // About to start (within 5 min)
-             (now >= startTime && now <= endTime)) && // Currently active
+            (now >= startTime && now <= endTime) && // Currently active
             booking.status.toUpperCase() === 'SCHEDULED'
           );
           
@@ -204,20 +202,16 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           
           const isCallDismissed = dismissedCalls.has(booking.id);
           
-          // IMPORTANT: Force notifications to appear for all active calls
-          // Set dismissed calls to empty to reset any previous dismissals
-          setDismissedCalls(new Set());
-          
           // For debugging
           console.log('Call notification check:', {
             bookingId: booking.id,
             notificationExists,
             isCallDismissed,
-            shouldShow: !notificationExists 
+            shouldShow: !notificationExists && !isCallDismissed
           });
           
-          // Show notification if it doesn't already exist (ignore dismissed state)
-          if (!notificationExists) {
+          // Show notification if it doesn't already exist and hasn't been dismissed
+          if (!notificationExists && !isCallDismissed) {
             console.log(`Adding notification for booking ${booking.id}`);
             
             addNotification({

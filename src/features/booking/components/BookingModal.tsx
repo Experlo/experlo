@@ -225,7 +225,7 @@ export default function BookingModal({ expert, isOpen, onClose }: BookingModalPr
                 <Dialog.Title className="text-xl font-semibold text-gray-900 mb-1">
                   Book a Session with {expert.user.firstName}
                 </Dialog.Title>
-                <p className="text-sm text-gray-500 mb-6">
+                <p className="text-sm text-gray-700 mb-6">
                   {currentStep === 'duration' && "Select the session duration"}
                   {currentStep === 'date' && "Choose a date for your session"}
                   {currentStep === 'time' && "Pick a time that works for you"}

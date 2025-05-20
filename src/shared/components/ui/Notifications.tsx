@@ -159,7 +159,7 @@ export default function Notifications() {
                       <Link
                         href={notification.link.url}
                         className="mt-2 inline-block px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
-                        target="_blank"
+                        onClick={() => handleClose(notification.id)}
                       >
                         {notification.link.text}
                       </Link>
