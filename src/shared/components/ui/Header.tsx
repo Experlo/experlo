@@ -6,11 +6,12 @@ import { Menu, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 
 import { useUser } from '@/context/UserContext';
-import { UserCircleIcon } from '@heroicons/react/24/outline';
+import { useExpertModal } from '@/context/ExpertModalContext';
+import { UserCircleIcon, BellIcon } from '@heroicons/react/24/outline';
 
 export default function Header() {
   const router = useRouter();
-
+  const { openBecomeExpertModal } = useExpertModal();
   const { user } = useUser();
 
   const handleLogout = async () => {
@@ -34,16 +35,34 @@ export default function Header() {
     <header className="bg-white shadow-sm fixed w-full top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          <div className="flex">
+          <div className="flex space-x-8">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/dashboard" className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hover:from-indigo-500 hover:to-purple-500 transition-all">
+              <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hover:from-indigo-500 hover:to-purple-500 transition-all">
                 experlo
+              </Link>
+            </div>
+            
+            <div className="hidden sm:flex items-center space-x-6">
+              <Link href="/experts" className="hidden sm:block text-sm font-medium px-6 py-2.5 rounded-full bg-gray-50 text-gray-800 hover:bg-gray-100 transition-colors">
+                Browse Experts
               </Link>
             </div>
           </div>
 
-          <div className="flex items-center">
-            <Menu as="div" className="relative ml-3">
+          <div className="flex items-center space-x-4">
+            {!user.isExpert && (
+              <button 
+                onClick={openBecomeExpertModal}
+                className="hidden sm:block text-sm font-medium px-6 py-2.5 rounded-full bg-gray-100 text-gray-900 hover:bg-gray-300 transition-colors cursor-pointer">
+                Become an Expert
+              </button>
+            )}
+            
+            <button className="flex items-center justify-center h-9 w-9 rounded-full  hover:bg-gray-200 transition-colors cursor-pointer">
+              <BellIcon className="h-5 w-5 text-gray-600" aria-hidden="true" />
+            </button>
+            
+            <Menu as="div" className="relative">
               <Menu.Button className="flex items-center max-w-xs bg-white rounded-full hover:ring-2 hover:ring-indigo-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer">
                 <div className="relative">
                   {user.image ? (
@@ -96,18 +115,7 @@ export default function Header() {
                         </Link>
                       )}
                     </Menu.Item>
-                    {!user.isExpert && (
-                      <Menu.Item>
-                        {({ active }) => (
-                          <Link
-                            href="/become-expert"
-                            className={`${active ? 'bg-gray-50' : ''} block px-3 py-2 text-sm text-gray-700 rounded-md mx-1 transition-colors duration-150 hover:bg-gray-50`}
-                          >
-                            Become an Expert
-                          </Link>
-                        )}
-                      </Menu.Item>
-                    )}
+                    {/* Removed 'Become an Expert' from dropdown since it's in the header */}
                     <Menu.Item>
                       {({ active }) => (
                         <Link

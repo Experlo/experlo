@@ -54,7 +54,7 @@ export default function LoginPage() {
       
       // Force a full page reload to ensure clean state
       const baseUrl = window.location.origin;
-      window.location.href = `${baseUrl}/dashboard`;
+      window.location.href = `${baseUrl}/`;
     } finally {
       setIsLoading(false);
     }

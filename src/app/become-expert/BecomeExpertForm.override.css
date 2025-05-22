@@ -1,0 +1,49 @@
+/* Override styles to improve form spacing in modal */
+.expertFormOverrides {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.expertFormOverrides .form-section {
+  margin-bottom: 2rem;
+}
+
+.expertFormOverrides .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.expertFormOverrides label {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.expertFormOverrides input,
+.expertFormOverrides textarea,
+.expertFormOverrides select {
+  padding: 0.75rem !important;
+  line-height: 1.5 !important;
+  font-size: 1rem !important;
+}
+
+.expertFormOverrides .category-tags {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Make buttons more spacious */
+.expertFormOverrides button {
+  padding: 0.75rem 1.5rem !important;
+  font-size: 1rem !important;
+}
+
+/* Add extra spacing to sections */
+.expertFormOverrides h3 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #374151;
+}

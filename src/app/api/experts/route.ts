@@ -29,6 +29,15 @@ interface CertificationInput {
 
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    
+    // Parse search and filter parameters
+    const search = searchParams.get('search') || '';
+    const category = searchParams.get('category') || '';
+    const minPrice = Number(searchParams.get('minPrice')) || 0;
+    const maxPrice = Number(searchParams.get('maxPrice')) || 1000;
+    const minRating = Number(searchParams.get('minRating')) || 0;
+    
     // Get the current user from the auth token
     const token = await getAuthToken();
     let currentUserId: string | undefined;
@@ -42,21 +51,61 @@ export async function GET(request: Request) {
       }
     }
     
-    // Find all experts, excluding the current user if they're logged in
+    // Build the where clause with filters
+    let whereClause: Prisma.ExpertProfileWhereInput = {};
+    
+    // Exclude current user if logged in
+    if (currentUserId) {
+      whereClause.userId = { not: currentUserId };
+    }
+    
+    // Apply price range filter
+    whereClause.pricePerHour = {
+      gte: minPrice,
+      lte: maxPrice
+    };
+    
+    // Apply category filter if specified
+    if (category) {
+      whereClause.categories = {
+        has: category
+      };
+    }
+    
+    // Apply rating filter
+    whereClause.rating = {
+      gte: minRating
+    };
+    
+    // Find experts with the applied filters
     const experts = await prisma.expertProfile.findMany({
-      where: currentUserId ? {
-        userId: {
-          not: currentUserId
-        }
-      } : {},
+      where: whereClause,
       include: {
         user: true,
         bookings: true,
+        education: true,
+        experience: true,
+        certifications: true,
       } as Prisma.ExpertProfileInclude,
     });
+    
+    // Further filter experts by search term (name/title/bio)
+    let filteredExperts = experts;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredExperts = experts.filter(expert => {
+        const fullName = `${expert.user.firstName} ${expert.user.lastName}`.toLowerCase();
+        const titleLower = expert.title.toLowerCase();
+        const bioLower = expert.bio.toLowerCase();
+        
+        return fullName.includes(searchLower) || 
+               titleLower.includes(searchLower) || 
+               bioLower.includes(searchLower);
+      });
+    }
 
     // Transform the data to match SerializedExpert type
-    const serializedExperts = experts.map((expert) => ({
+    const serializedExperts = filteredExperts.map((expert) => ({
       id: expert.id,
       userId: expert.userId,
       user: {
@@ -76,9 +125,34 @@ export async function GET(request: Request) {
       pricePerHour: expert.pricePerHour,
       isAvailable: expert.isAvailable,
       categories: expert.categories,
-      education: [],
-      experience: [],
-      certifications: [],
+      education: expert.education.map(edu => ({
+        id: edu.id,
+        school: edu.school,
+        degree: edu.degree,
+        field: edu.field,
+        startYear: edu.startYear,
+        endYear: edu.endYear,
+        createdAt: edu.createdAt.toISOString(),
+        updatedAt: edu.updatedAt.toISOString(),
+      })),
+      experience: expert.experience.map(exp => ({
+        id: exp.id,
+        company: exp.company,
+        position: exp.position,
+        description: exp.description,
+        startYear: exp.startYear,
+        endYear: exp.endYear || null,
+        createdAt: exp.createdAt.toISOString(),
+        updatedAt: exp.updatedAt.toISOString(),
+      })),
+      certifications: expert.certifications.map(cert => ({
+        id: cert.id,
+        name: cert.name,
+        issuer: cert.issuer,
+        year: cert.year,
+        createdAt: cert.createdAt.toISOString(),
+        updatedAt: cert.updatedAt.toISOString(),
+      })),
       totalBookings: expert.bookings.length,
       totalConsultationMinutes: expert.bookings.reduce((total: number, booking: any) => {
         return total + (booking.durationMinutes || 0);
@@ -95,8 +169,8 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('Error fetching experts:', error);
     return NextResponse.json(
-      { status: 500, message: 'Failed to fetch experts' }
-    );
+      { error: 'Failed to fetch experts', message: error instanceof Error ? error.message : 'Unknown error' }
+    , { status: 500 });
   }
 }
 
@@ -196,8 +270,8 @@ export async function POST(request: Request) {
             data: {
               expert: { connect: { id: expertProfile.id } },
               name: cert.name || '',
-              issuer: cert.issuingOrganization || cert.issuer || '',
-              year: parseInt(cert.issueDate?.split('-')[0]) || new Date().getFullYear()
+              issuer: (cert.issuingOrganization || cert.issuer || ''),
+              year: parseInt((cert.issueDate?.split('-')[0]) || '') || new Date().getFullYear()
             }
           });
         })
@@ -225,9 +299,9 @@ export async function POST(request: Request) {
       userId: result.profile.userId,
       user: {
         id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
         isExpert: true,
         image: user.image || undefined,
         createdAt: user.createdAt.toISOString(),

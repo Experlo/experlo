@@ -30,7 +30,7 @@ export default function FeaturedExperts({ experts }: FeaturedExpertsProps) {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {experts.map((expert) => (
+          {experts.slice(0, 4).map((expert) => (
             <ExpertCard key={expert.id} expert={expert} showFeatured={true} />
           ))}
         </div>

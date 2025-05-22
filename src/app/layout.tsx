@@ -3,6 +3,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import { UserProvider } from '@/context/UserContext';
 import { NotificationProvider } from '@/context/NotificationContext';
+import { ExpertModalProvider } from '@/context/ExpertModalContext';
 import Notifications from '@/shared/components/ui/Notifications';
 import { Toaster } from 'sonner';
 import "./globals.css";
@@ -28,9 +29,11 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-white`}>
         <UserProvider>
           <NotificationProvider>
-            {children}
-            <Notifications />
-            <Toaster position="top-right" />
+            <ExpertModalProvider>
+              {children}
+              <Notifications />
+              <Toaster position="top-right" />
+            </ExpertModalProvider>
           </NotificationProvider>
         </UserProvider>
       </body>

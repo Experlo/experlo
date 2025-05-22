@@ -24,67 +24,77 @@ export default function ExpertCard({ expert }: ExpertCardProps) {
 
   return (
     <Link href={`/experts/${id}`} className="block group h-full">
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200 h-full flex flex-col">
-        {/* Expert Image - Pink background for female experts, blue for male */}
-        <div className="relative h-60 w-full flex items-center justify-center bg-gray-50 p-4">
-          {image ? (
-            <div className="relative h-32 w-32 rounded-full overflow-hidden shadow-lg">
-              <Image
-                src={image}
-                alt={`${firstName} ${lastName}`}
-                fill
-                className="object-cover"
-                // Handle both local and S3 URLs
-                unoptimized={image.startsWith('/uploads')}
-              />
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200 h-full flex flex-col">
+        {/* Profile section with colored background - fixed height */}
+        <div className={`bg-indigo-50 p-6 min-h-[160px] flex flex-col`}>
+          <div className="flex justify-between items-start">
+            {/* Profile Image */}
+            {image ? (
+              <div className="relative h-20 w-20 rounded-full overflow-hidden shadow-md">
+                <Image
+                  src={image}
+                  alt={`${firstName} ${lastName}`}
+                  fill
+                  className="object-cover"
+                  // Handle both local and S3 URLs
+                  unoptimized={image.startsWith('/uploads')}
+                />
+              </div>
+            ) : (
+              <div className={`h-12 w-12 rounded-full overflow-hidden shadow-md flex items-center justify-center ${gender?.toLowerCase() === 'female' ? 'bg-gradient-to-br from-[#ec4899] to-[#db2777]' : 'bg-gradient-to-br from-[#6366f1] to-[#4f46e5]'}`}>
+                <span className="text-lg font-semibold text-white">
+                  {`${firstName[0]}${lastName[0]}`}
+                </span>
+              </div>
+            )}
+            
+            {/* Price tag */}
+            <div className="bg-[#4f46e5] text-white px-2.5 py-0.5 rounded-full text-xs font-medium">
+              ${pricePerHour}/hr
             </div>
-          ) : (
-            <div className={`h-32 w-32 rounded-full overflow-hidden shadow-lg flex items-center justify-center ${gender?.toLowerCase() === 'female' ? 'bg-gradient-to-br from-[#ec4899] to-[#db2777]' : 'bg-gradient-to-br from-[#6366f1] to-[#4f46e5]'}`}>
-              <span className="text-2xl font-semibold text-white">
-                {`${firstName[0]}${lastName[0]}`}
-              </span>
-            </div>
-          )}
-          <div className="absolute top-4 right-4 bg-[#4f46e5] text-white px-3 py-1 rounded-full text-sm font-medium">
-            ${pricePerHour}/hr
+          </div>
+          
+          {/* Name and title */}
+          <div className="mt-4 flex-grow flex flex-col justify-end">
+            <h3 className="font-semibold text-gray-900">{`${firstName} ${lastName}`}</h3>
+            <p className="text-sm text-gray-500 mt-1">{title}</p>
           </div>
         </div>
 
-        {/* Expert Info */}
-        <div className="p-6 flex-1 flex flex-col">
-          <div className="flex flex-col space-y-2 mb-6 flex-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">{`${firstName} ${lastName}`}</h3>
-                <p className="text-sm text-gray-600">{title}</p>
-              </div>
-              <div className="flex items-center space-x-1">
-                <StarIcon className="h-5 w-5 text-yellow-400" />
-                <span className="text-sm font-medium text-gray-700">{rating.toFixed(1)}</span>
-                <span className="text-sm text-gray-500">({totalBookings})</span>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {categories.slice(0, 4).map((category, index) => {
+        {/* Description/tags section with fixed height */}
+        <div className="p-6 flex flex-col justify-between flex-grow">
+          {/* Top part with categories */}
+          <div>
+            <div className="flex flex-wrap gap-1 mb-4">
+              {categories.slice(0, 3).map((category, index) => {
                 return (
                   <span
                     key={index}
-                    className="text-sm font-medium text-[#4f46e5] bg-indigo-50 rounded-full px-3 py-1"
+                    className="text-xs font-medium text-[#4f46e5] bg-indigo-50 rounded-full px-2 py-0.5"
                   >
                     {category}
                   </span>
                 );
               })}
-              {categories.length > 4 && (
+              {categories.length > 3 && (
                 <span className="text-xs text-gray-500">
-                  +{categories.length - 4} more
+                  +{categories.length - 3}
                 </span>
               )}
             </div>
           </div>
-          <button className="mt-auto w-full bg-[#4f46e5] hover:bg-[#4338ca] text-white px-6 py-3 rounded-xl font-medium transition-colors duration-200">
-            Book Now
-          </button>
+          
+          {/* Bottom part with rating and button - always at the bottom */}
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center">
+              <StarIcon className="h-4 w-4 text-yellow-400" />
+              <span className="text-sm text-gray-700 ml-1 font-medium">{rating.toFixed(1)}</span>
+              <span className="text-sm text-gray-500 ml-1">({totalBookings})</span>
+            </div>
+            <button className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer">
+              Book Now
+            </button>
+          </div>
         </div>
       </div>
     </Link>

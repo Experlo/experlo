@@ -1,0 +1,23 @@
+/* Global fix for layout shifts when opening modals */
+html {
+  overflow-y: scroll; /* Always show scrollbar to prevent layout shifts */
+}
+
+html.modal-open {
+  /* When modal is open, we keep the scrollbar but make it transparent to prevent jumping */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+html.modal-open::-webkit-scrollbar {
+  /* Safari and Chrome */
+  display: none;
+}
+
+body.modal-open {
+  /* Prevent scrolling while maintaining layout */
+  overflow: hidden;
+  /* Add padding to compensate for the scrollbar that's always there */
+  /* This prevents layout shift */
+  padding-right: var(--scrollbar-compensation, 0px);
+}

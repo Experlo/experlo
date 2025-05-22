@@ -36,9 +36,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         // Try to get more detailed error information
         let errorMessage = 'Failed to fetch user data';
         try {
+          console.log("response  ", response)
           const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-          console.error('API error details:', errorData);
+          // Handle different error response formats
+          errorMessage = errorData.error || errorData.message || (typeof errorData === 'string' ? errorData : errorMessage);
+          console.error('API error details:', JSON.stringify(errorData));
         } catch (e) {
           console.error('Could not parse error response:', e);
         }
@@ -65,8 +67,28 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Check if we're on a public route that doesn't need authentication
+  const isPublicRoute = () => {
+    if (typeof window === 'undefined') return true; // Server-side
+    
+    const publicPaths = [
+      '/auth/login',
+      '/auth/register',
+      '/auth/forgot-password',
+      '/auth/reset-password'
+    ];
+    
+    return publicPaths.some(path => window.location.pathname.includes(path));
+  };
+  
   useEffect(() => {
-    fetchUser();
+    // Only fetch user data if we're not on a public route
+    if (!isPublicRoute()) {
+      fetchUser();
+    } else {
+      // On public routes, just set loading to false without fetching
+      setLoading(false);
+    }
   }, []);
 
   return (

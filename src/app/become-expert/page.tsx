@@ -1,68 +1,40 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import BecomeExpertForm from './BecomeExpertForm';
-import { FormData } from './BecomeExpertForm';
-import { useUser } from '@/context/UserContext';
+import { toast } from 'sonner';
+import { useExpertModal } from '@/context/ExpertModalContext';
 
 export default function BecomeExpertPage() {
   const router = useRouter();
-  const { refetchUser } = useUser();
-
-  const handleSave = async (formData: FormData) => {
-    try {
-      // Validate form data before sending
-      if (!formData.title || !formData.bio || formData.categories.length === 0 || !formData.pricePerHour) {
-        throw new Error('Please fill in all required fields: Title, Bio, Categories, and Hourly Rate');
-      }
-
-      const response = await fetch('/api/experts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      let data;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        data = { error: 'Received non-JSON response from server' };
-      }
-      
-      if (!response.ok) {
-        console.error('Server response:', data);
-        throw new Error(`Failed to create expert profile: ${data.error || response.statusText}`);
-      }
-
-      // Refresh user data to update isExpert status
-      await refetchUser();
-      
-      // Success - redirect to dashboard
-      router.push('/dashboard');
-    } catch (error) {
-      console.error('Error creating expert profile:', error);
-      alert(error instanceof Error ? error.message : 'An unknown error occurred');
-    }
-  };
-
-  const handleCancel = () => {
-    router.push('/dashboard');
-  };
+  const { openBecomeExpertModal } = useExpertModal();
+  
+  useEffect(() => {
+    // Show a toast notification that the user is being redirected
+    toast.info('The Become an Expert form is now accessible from the header', {
+      duration: 4000,
+    });
+    
+    // Open the modal
+    openBecomeExpertModal();
+    
+    // Redirect to home
+    const redirectTimeout = setTimeout(() => {
+      router.push('/');
+    }, 100);
+    
+    return () => clearTimeout(redirectTimeout);
+  }, [router, openBecomeExpertModal]);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-          <div className="p-6 bg-white border-b border-gray-200">
-            <BecomeExpertForm 
-              onSave={handleSave}
-              onCancel={handleCancel}
-            />
-          </div>
-        </div>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-8 text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Redirecting to Home</h2>
+        <p className="text-gray-600 mb-6">
+          The Become an Expert form is now accessible from the header navigation.
+          You will be redirected to the home page automatically.
+        </p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
       </div>
     </div>
   );

@@ -1,0 +1,44 @@
+/* Fix for the small form display */
+.becomeExpertForm {
+  display: flex;
+  flex-direction: column;
+  min-height: 500px;
+}
+
+.becomeExpertForm form {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Enlarge the form fields */
+.becomeExpertForm input,
+.becomeExpertForm textarea,
+.becomeExpertForm select {
+  padding: 0.75rem !important;
+  line-height: 1.5 !important;
+  font-size: 1rem !important;
+  margin-bottom: 1.25rem !important;
+}
+
+/* Increase spacing between sections */
+.becomeExpertForm h3,
+.becomeExpertForm h2 {
+  margin-top: 1.5rem !important;
+  margin-bottom: 1rem !important;
+  font-size: 1.25rem !important;
+}
+
+/* Ensure buttons are always visible */
+.becomeExpertForm .buttonContainer {
+  margin-top: auto;
+  padding-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+/* Apply the fix globally */
+#__next, body, html {
+  height: 100%;
+}

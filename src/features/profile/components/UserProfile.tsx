@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import '@/shared/styles/modal-fixes.css';
 import { SerializedUser } from '@/types/user';
 import { SerializedExpert } from '@/types/expert';
 import Image from 'next/image';
@@ -43,6 +44,35 @@ export default function UserProfile({ user, expertData: initialExpertData, isOwn
   console.log('User data in profile:', user);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Effect to prevent layout shifts when edit form opens/closes
+  useEffect(() => {
+    if (isEditing) {
+      // Calculate scrollbar width to prevent layout shift
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      
+      // Set CSS variable for scrollbar compensation
+      document.documentElement.style.setProperty('--scrollbar-compensation', `${scrollbarWidth}px`);
+      
+      // Add classes to prevent layout shifts
+      document.documentElement.classList.add('modal-open');
+      document.body.classList.add('modal-open');
+    } else {
+      // Remove classes when not editing
+      document.documentElement.classList.remove('modal-open');
+      document.body.classList.remove('modal-open');
+      
+      // Reset the CSS variable
+      document.documentElement.style.removeProperty('--scrollbar-compensation');
+    }
+    
+    // Clean up on unmount
+    return () => {
+      document.documentElement.classList.remove('modal-open');
+      document.body.classList.remove('modal-open');
+      document.documentElement.style.removeProperty('--scrollbar-compensation');
+    };
+  }, [isEditing]);
   const [expertData, setExpertData] = useState<SerializedExpert | undefined>(initialExpertData);
   const [refreshCounter, setRefreshCounter] = useState(0);
 

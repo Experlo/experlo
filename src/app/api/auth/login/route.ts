@@ -60,23 +60,23 @@ export async function POST(request: Request) {
       { status: 200 }
     );
 
-    // Set the cookie using Next.js cookies API
+    // Set the cookie - only set once with easier to work with settings
     response.cookies.set({
       name: 'auth_token',
       value: token,
       httpOnly: true,
-      secure: false, // Set to false for local development
+      secure: false, // Definitely false for local development
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 7 // 1 week
     });
-
-    // Set cookie directly on response
+    
+    // Also set a non-httpOnly version for client-side detection
     response.cookies.set({
-      name: 'auth_token',
-      value: token,
-      httpOnly: true,
-      secure: false, // Set to false for local development
+      name: 'auth_token_client',
+      value: 'authenticated', // Just a flag, not the actual token for security
+      httpOnly: false, // Allow JavaScript access
+      secure: false,
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 7 // 1 week

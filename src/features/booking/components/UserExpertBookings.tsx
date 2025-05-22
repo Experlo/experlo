@@ -2,8 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useUser } from '@/context/UserContext';
-import { CalendarIcon, ChevronRightIcon, VideoCameraIcon } from '@heroicons/react/24/outline';
+import { ChevronRightIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
+import BookingCard from './BookingCard';
+import { VideoCameraIcon } from '@heroicons/react/24/outline';
+import { Button } from '@/shared/components/ui/Button'
+import { useRouter } from 'next/navigation';
 
 interface Booking {
   id: string;
@@ -20,11 +24,13 @@ interface UserExpertBookingsProps {
 }
 
 export default function UserExpertBookings({ expertId }: UserExpertBookingsProps) {
+  const router = useRouter();
   const { user } = useUser();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
+  // No longer needed as we only show one booking
+  // const [showAll, setShowAll] = useState(false);
   const [expertName, setExpertName] = useState<string>('');
   const [activeBookings, setActiveBookings] = useState<{[key: string]: boolean}>({});
 
@@ -76,36 +82,49 @@ export default function UserExpertBookings({ expertId }: UserExpertBookingsProps
 
         const data = await response.json();
         
-        // Sort bookings - future bookings first, then past bookings
+        // Current time for comparison
         const now = new Date();
+        
+        // Convert all booking dates to Date objects
         const bookingsWithDates = data.bookings.map((booking: Booking) => ({
           ...booking,
           scheduledAt: new Date(booking.scheduledAt)
         }));
         
-        // Only show upcoming and active bookings for the expert profile
-        const upcomingBookings = bookingsWithDates
-          .filter((booking: Booking) => {
-            // Only include upcoming and active bookings
-            const startTime = booking.scheduledAt as Date;
-            const endTime = new Date(startTime);
-            endTime.setMinutes(endTime.getMinutes() + booking.durationMinutes);
-            
-            // Keep if it's in the future OR if it's currently active
-            return (startTime > now || (now >= startTime && now <= endTime)) && 
-                   booking.status.toUpperCase() !== 'CANCELLED' &&
-                   booking.status.toUpperCase() !== 'COMPLETED';
-          })
-          .sort((a: Booking, b: Booking) => 
-            (a.scheduledAt as Date).getTime() - (b.scheduledAt as Date).getTime()
-          );
+        // Find any active sessions (happening right now)
+        let activeSession = bookingsWithDates.find((booking: Booking) => {
+          const startTime = booking.scheduledAt as Date;
+          const endTime = new Date(startTime);
+          endTime.setMinutes(endTime.getMinutes() + booking.durationMinutes);
           
-        // Get the expert's name if available
-        if (upcomingBookings.length > 0 && upcomingBookings[0].expertName) {
-          setExpertName(upcomingBookings[0].expertName);
+          return now >= startTime && now <= endTime && 
+                 booking.status.toUpperCase() === 'SCHEDULED';
+        });
+        
+        // If no active session, find the next upcoming one
+        if (!activeSession) {
+          const upcomingBookings = bookingsWithDates
+            .filter((booking: Booking) => {
+              // Only include future bookings
+              return (booking.scheduledAt as Date) > now && 
+                     booking.status.toUpperCase() !== 'CANCELLED' &&
+                     booking.status.toUpperCase() !== 'COMPLETED';
+            })
+            .sort((a: Booking, b: Booking) => 
+              (a.scheduledAt as Date).getTime() - (b.scheduledAt as Date).getTime()
+            );
+            
+          // Take only the first upcoming booking
+          activeSession = upcomingBookings.length > 0 ? upcomingBookings[0] : null;
         }
         
-        setBookings(upcomingBookings);
+        // Set the bookings array to either have the single active/upcoming session or be empty
+        setBookings(activeSession ? [activeSession] : []);
+        
+        // Get the expert's name if available
+        if (activeSession && activeSession.expertName) {
+          setExpertName(activeSession.expertName);
+        }
       } catch (err) {
         console.error('Error fetching expert bookings:', err);
         setError(err instanceof Error ? err.message : 'Failed to load bookings');
@@ -138,14 +157,13 @@ export default function UserExpertBookings({ expertId }: UserExpertBookingsProps
   if (bookings.length === 0) {
     return null; // Don't show anything if there are no bookings
   }
-
+  
   // Helper function to format dates
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+      day: 'numeric'
     });
   };
 
@@ -162,6 +180,7 @@ export default function UserExpertBookings({ expertId }: UserExpertBookingsProps
   const getStatusStyle = () => {
     return 'bg-[#4f46e5] text-white';
   };
+
   
   // Get status text based on booking status and time
   const getStatusText = (status: string, date: Date) => {
@@ -184,72 +203,79 @@ export default function UserExpertBookings({ expertId }: UserExpertBookingsProps
     }
   };
 
-  const displayBookings = showAll ? bookings : bookings.slice(0, 2);
-  const hasMoreBookings = bookings.length > 2;
-
+  // We're only showing a single booking now (most immediate one)  
   return (
     <div className="mt-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Your upcoming call with {expertName || 'this expert'}
-        </h3>
-        {hasMoreBookings && (
-          <Link href="/bookings" className="text-sm text-indigo-600 hover:text-indigo-800">
-            View all
-          </Link>
-        )}
-      </div>
-      
-      <div className="space-y-3">
-        {displayBookings.map((booking) => {
-          const bookingDate = booking.scheduledAt as Date;
-          const endTime = new Date(bookingDate);
-          endTime.setMinutes(endTime.getMinutes() + booking.durationMinutes);
+      {bookings.length > 0 && (
+        <>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            {bookings[0].scheduledAt > new Date() ? 'Your next session' : 'Your active session'}
+          </h3>
           
-          return (
-            <div 
-              key={booking.id} 
-              className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <span className="inline-block px-2.5 py-0.5 text-xs font-medium rounded-full bg-[#4f46e5] text-white">
-                    {getStatusText(booking.status, bookingDate)}
-                  </span>
-                  <p className="font-medium text-gray-900">{formatDate(bookingDate)}</p>
-                  <p className="text-sm text-gray-600">
-                    {formatTime(bookingDate)} - {formatTime(endTime)} ({booking.durationMinutes} min)
-                  </p>
-                </div>
-                
-                {/* The arrow link to bookings page has been removed */}
-              </div>
+          <div className="space-y-6">
+            {bookings.map((booking) => {
+              const bookingDate = booking.scheduledAt as Date;
+              const endTime = new Date(bookingDate);
+              endTime.setMinutes(endTime.getMinutes() + booking.durationMinutes);
               
-              {/* Show Join Call button at the bottom for active bookings */}
-              {activeBookings[booking.id] && (
-                <div className="mt-4">
-                  <button 
-                    className="w-full flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md transition-colors cursor-pointer"
-                    onClick={() => window.open(`/video-calls/${booking.id}`, '_blank')}
-                  >
-                    <VideoCameraIcon className="h-5 w-5 mr-2" />
-                    Join Call
-                  </button>
+              const now = new Date();
+              const isActive = now >= bookingDate && now <= endTime && booking.status.toUpperCase() === 'SCHEDULED';
+              const minutesToStart = Math.max(0, Math.floor((bookingDate.getTime() - now.getTime()) / (1000 * 60)));
+              
+              return (
+                <div key={booking.id} className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+                  <div className="space-y-2">
+                    {/* Top row: Date and Status badge (not button) */}
+                    <div className="flex justify-between items-center">
+                      <p className="text-gray-700 font-medium">
+                        {formatDate(bookingDate)}
+                      </p>
+                      
+                      {/* Status badge (only show for non-active calls) */}
+                      {!isActive && (
+                        bookingDate > now ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            UPCOMING
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            COMPLETED
+                          </span>
+                        )
+                      )}
+                    </div>
+                    
+                    {/* Middle row: Time */}
+                    <p className="text-gray-600">
+                      {formatTime(bookingDate)} - {formatTime(endTime)} 
+                      <span className="text-gray-500 text-sm ml-2">({booking.durationMinutes} min)</span>
+                    </p>
+                    
+                    {/* Help text row - only show for upcoming calls */}
+                    {bookingDate > now && minutesToStart < 60 && (
+                      <p className="text-xs text-gray-500">You can join 5 minutes before the scheduled time</p>
+                    )}
+                    
+                    {/* Bottom row: Join Call button (only for active calls) */}
+                    {isActive && (
+                      <div className="mt-3 flex justify-center">
+                            <Button 
+                              onClick={() => router.push(`/video-calls/${booking.id}`)}
+                              variant="default"
+                              className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-600 hover:bg-green-700 text-white transition-colors cursor-pointer"
+                            >
+                              <VideoCameraIcon className="w-3.5 h-3.5 mr-1 font-bold" />
+                              Join Call Now
+                            </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-          );
-        })}
-        
-        {hasMoreBookings && !showAll && (
-          <button
-            onClick={() => setShowAll(true)}
-            className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-800 text-center border border-gray-200 rounded-lg hover:bg-gray-50"
-          >
-            Show {bookings.length - 2} more booking{bookings.length - 2 > 1 ? 's' : ''}
-          </button>
-        )}
-      </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

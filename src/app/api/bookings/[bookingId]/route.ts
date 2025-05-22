@@ -7,6 +7,17 @@ export async function GET(
   { params }: { params: { bookingId: string } }
 ) {
   try {
+    // Get and validate the booking ID from params
+    const { bookingId } = await Promise.resolve(params);
+    console.log('[DEBUG] Booking API: Requested booking ID:', bookingId);
+    
+    if (!bookingId) {
+      return NextResponse.json(
+        { error: 'Booking ID is required' },
+        { status: 400 }
+      );
+    }
+
     // Verify authentication
     const token = await getAuthToken();
     if (!token) {
@@ -23,8 +34,6 @@ export async function GET(
         { status: 401 }
       );
     }
-
-    const bookingId = params.bookingId;
     
     // Fetch the booking with related user and expert details
     const booking = await prisma.booking.findUnique({

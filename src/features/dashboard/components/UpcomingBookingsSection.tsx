@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useUser } from '@/context/UserContext';
-import { VideoCameraIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ChevronRightIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
-import Image from 'next/image';
+import BookingCard from '@/features/booking/components/BookingCard';
 
 interface Booking {
   id: string;
@@ -155,61 +155,16 @@ export default function UpcomingBookingsSection() {
         </Link>
       </div>
       
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-        <div className="flex justify-between items-start">
-          <div className="flex items-center space-x-3">
-            <div className="relative h-12 w-12 flex-shrink-0">
-              {expert.photo ? (
-                <div className="h-full w-full rounded-full overflow-hidden shadow-sm">
-                  <div className="relative h-full w-full">
-                    <Image
-                      src={expert.photo}
-                      alt={`${expert.name}'s profile`}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="h-full w-full rounded-full overflow-hidden shadow-sm flex items-center justify-center bg-gradient-to-br from-[#6366f1] to-[#4f46e5]">
-                  <span className="text-base font-semibold text-white">
-                    {expert.name.split(' ').slice(0, 2).map(n => n[0] || '').join('')}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div>
-              <Link 
-                href={`/experts/${expert.id}`} 
-                className="text-md font-medium text-indigo-600 hover:text-indigo-900"
-              >
-                {expert.name}
-              </Link>
-              
-              <p className="text-sm text-gray-600 mt-1">
-                {formattedDate} · {formattedStartTime} - {formattedEndTime}
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#4f46e5] text-white">
-              {isActive ? 'Active Now' : 'Upcoming'}
-            </span>
-          </div>
-          
-          {isActive && (
-            <Link 
-              href={`/video-calls/${nextBooking.id}`}
-              target="_blank"
-              className="flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
-            >
-              <VideoCameraIcon className="h-4 w-4 mr-1.5" />
-              Join Now
-            </Link>
-          )}
-        </div>
-      </div>
+      <BookingCard booking={{
+        ...nextBooking,
+        role: 'client',
+        expert: {
+          id: nextBooking.expertId,
+          name: nextBooking.expertName,
+          title: 'Expert',
+          photo: nextBooking.expert?.photo
+        }
+      }} />
     </div>
   );
 }

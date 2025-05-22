@@ -17,8 +17,47 @@ model Booking {
   durationMinutes Int
   status          BookingStatus  @default(SCHEDULED)
   transcriptUrl   String?
+  calls           Call[]         @relation("BookingCalls")
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+}
+
+model Call {
+  id              String           @id @default(cuid())
+  booking         Booking          @relation("BookingCalls", fields: [bookingId], references: [id])
+  bookingId       String
+  startedAt       DateTime         @default(now())
+  endedAt         DateTime?
+  duration        Int?             // Duration in seconds
+  status          CallStatus       @default(IN_PROGRESS)
+  channelName     String           // Agora channel name
+  participants    CallParticipant[] 
+  recording       Boolean          @default(false)
+  recordingUrl    String?
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model CallParticipant {
+  id              String           @id @default(cuid())
+  call            Call             @relation(fields: [callId], references: [id], onDelete: Cascade)
+  callId          String
+  user            User             @relation(fields: [userId], references: [id])
+  userId          String
+  role            ParticipantRole  @default(ATTENDEE)
+  joinedAt        DateTime         @default(now())
+  leftAt          DateTime?
+  duration        Int?             // Duration in seconds
+  deviceInfo      Json?            // Browser, OS, etc.
+  networkQuality  Int?             // 0-5 scale
+  audioEnabled    Boolean          @default(true)
+  videoEnabled    Boolean          @default(true)
+  screenSharing   Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([callId, userId])
 }
 
 
@@ -73,22 +112,24 @@ model Session {
 }
 
 model User {
-  id              String         @id @default(cuid())
-  email           String         @unique
-  firstName       String
-  lastName        String
-  image           String?
-  password        String
-  gender          String?        // Can be "male" or "female"
-  dateOfBirth     DateTime?      // User's date of birth
-  isExpert        Boolean        @default(false)
-  expertProfile   ExpertProfile?
-  bookings        Booking[]      @relation("UserBookings")
-  reviews         Review[]
-  accounts        Account[]
-  sessions        Session[]
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id               String            @id @default(cuid())
+  email            String            @unique
+  firstName        String?
+  lastName         String?
+  image            String?
+  phone            String?
+  password         String
+  gender           String?           // Can be "male" or "female"
+  dateOfBirth      DateTime?         // User's date of birth
+  isExpert         Boolean           @default(false)
+  expertProfile    ExpertProfile?
+  bookings         Booking[]         @relation("UserBookings")
+  callParticipants CallParticipant[]
+  reviews          Review[]
+  accounts         Account[]
+  sessions         Session[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Education {
@@ -156,4 +197,21 @@ enum BookingStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+  NO_SHOW
+}
+
+enum CallStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  MISSED
+  FAILED
+  CANCELLED
+}
+
+enum ParticipantRole {
+  HOST
+  EXPERT
+  CLIENT
+  ATTENDEE
 }

@@ -4,7 +4,6 @@ import { verifyToken } from '@/lib/auth/jwt';
 
 // Define protected routes that require authentication
 const protectedRoutes = [
-  '/dashboard',
   '/profile',
   '/experts',
   '/bookings'
@@ -21,8 +20,7 @@ export async function middleware(request: NextRequest) {
   
   // Skip middleware for public assets and API routes
   if (pathname.startsWith('/_next') || 
-      pathname.startsWith('/api') || 
-      pathname === '/') {
+      pathname.startsWith('/api')) {
     return NextResponse.next();
   }
 
@@ -54,9 +52,24 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users from auth routes to dashboard
+  // Redirect authenticated users from auth routes to root (which will show dashboard)
   if (isAuthenticated && isAuthRoute) {
-    return NextResponse.redirect(new URL('/dashboard', baseUrl));
+    return NextResponse.redirect(new URL('/', baseUrl));
+  }
+  
+  // Handle root path based on authentication
+  if (pathname === '/') {
+    if (!isAuthenticated) {
+      // Unauthenticated users see the landing page
+      return NextResponse.next();
+    }
+    // Authenticated users will see the dashboard (handled in the page component)
+    return NextResponse.next();
+  }
+  
+  // Redirect /dashboard to root path since dashboard is now at the root
+  if (pathname === '/dashboard') {
+    return NextResponse.redirect(new URL('/', baseUrl));
   }
 
   // Allow access to all other routes
@@ -65,6 +78,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/',
+    '/dashboard',
     '/dashboard/:path*',
     '/profile/:path*',
     '/experts/:path*',

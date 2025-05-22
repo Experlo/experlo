@@ -58,12 +58,12 @@ export default function ExpertProfile({ expert }: ExpertProfileProps) {
             <div className="lg:col-span-3">
               {/* Profile Info */}
               <div className="relative bg-gray-50 shadow-sm rounded-2xl overflow-hidden h-full">
-                <div className="absolute top-4 right-4 bg-[#4f46e5] text-white px-3 py-1 rounded-full text-sm font-medium z-10">
+                <div className="absolute top-3 right-3 bg-[#4f46e5] text-white px-3 py-1 rounded-full text-sm font-medium z-10">
                   ${pricePerHour}/hr
                 </div>
-                <div className="p-8">
-                  <div className="flex items-start space-x-6">
-                    <div className="relative h-40 w-40 rounded-full overflow-hidden shadow-lg flex-shrink-0">
+                <div className="py-3 px-4">
+                  <div className="flex items-start space-x-4">
+                    <div className="relative h-24 w-24 rounded-full overflow-hidden shadow-lg flex-shrink-0">
                       {image ? (
                         <Image
                           src={image}
@@ -84,10 +84,10 @@ export default function ExpertProfile({ expert }: ExpertProfileProps) {
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h1 className="text-3xl font-bold text-gray-900 mb-2">{`${firstName} ${lastName}`}</h1>
-                          <p className="text-xl text-gray-600 mb-4">{title}</p>
+                          <h1 className="text-2xl font-bold text-gray-900 mb-1">{`${firstName} ${lastName}`}</h1>
+                          <p className="text-lg text-gray-600 mb-2">{title}</p>
                           {/* Gender and Age Row */}
-                          <div className="flex items-center space-x-4 text-sm mb-2">
+                          <div className="flex items-center space-x-4 text-sm mb-1">
                             <div className="flex items-center text-gray-600">
                               <svg xmlns="http://www.w3.org/2000/svg" 
                                 className={`mr-1.5 h-5 w-5 flex-shrink-0 ${effectiveGender === 'female' ? 'text-pink-500' : 'text-blue-500'}`} 
@@ -101,7 +101,7 @@ export default function ExpertProfile({ expert }: ExpertProfileProps) {
                               </span>
                             </div>
                             <div className="flex items-center text-gray-600">
-                              <CalendarIcon className="h-5 w-5 mr-1.5" />
+                              <CalendarIcon className="h-4 w-4 mr-1" />
                               {/* Only show age if dateOfBirth is specified */}
                               <span>
                                 {dateOfBirth ? 
@@ -112,25 +112,25 @@ export default function ExpertProfile({ expert }: ExpertProfileProps) {
                           </div>
                           
                           {/* Reviews and Sessions Row */}
-                          <div className="flex items-center space-x-4 text-sm">
+                          <div className="flex items-center space-x-3 text-sm">
                             <div className="flex items-center text-yellow-500">
-                              <StarIcon className="h-5 w-5" />
+                              <StarIcon className="h-4 w-4" />
                               <span className="ml-1 font-medium">{rating.toFixed(1)}</span>
                               <span className="text-gray-500 ml-1">({totalBookings} reviews)</span>
                             </div>
                             <div className="flex items-center text-gray-600">
-                              <CalendarIcon className="h-5 w-5 mr-1.5" />
+                              <CalendarIcon className="h-4 w-4 mr-1" />
                               <span>{bookings?.filter(b => b.status === 'COMPLETED').length || 0} sessions completed</span>
                             </div>
                           </div>
                         </div>
                       </div>
 
-                      <div className="mt-6 flex flex-wrap gap-2">
+                      <div className="mt-3 flex flex-wrap gap-1">
                         {categories.map((category, index) => (
                           <span
                             key={index}
-                            className="px-3 py-1 text-sm font-medium text-[#4f46e5] bg-indigo-50 rounded-full"
+                            className="px-2 py-0.5 text-xs font-medium text-[#4f46e5] bg-indigo-50 rounded-full"
                           >
                             {category}
                           </span>
@@ -139,8 +139,8 @@ export default function ExpertProfile({ expert }: ExpertProfileProps) {
                     </div>
                   </div>
                   
-                  <div className="mt-8">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">About</h2>
+                  <div className="mt-3">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-1">About</h2>
                     <p className="text-gray-600 whitespace-pre-line">{bio}</p>
                   </div>
                 </div>
